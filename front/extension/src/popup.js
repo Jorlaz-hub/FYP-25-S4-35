@@ -1,3 +1,4 @@
+// Formats a single row of label and value
 function formatRow(label, value) {
   var row = document.createElement('div');
   row.className = 'row';
@@ -10,6 +11,7 @@ function formatRow(label, value) {
   return row;
 }
 
+// Renders the scan results into the popup
 function render(results) {
   var container = document.getElementById('results');
   if (!container) return;
@@ -25,15 +27,18 @@ function render(results) {
   });
 }
 
+// Loads the scan results for the current tab
 function load() {
   chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
     var tab = tabs && tabs[0];
     if (!tab || !tab.url) return;
     var key = 'scan:' + tab.url;
+    // utilises chrome.storage.local to get the scan results
     chrome.storage.local.get([key], function (data) {
       render((data || {})[key] || []);
     });
   });
 }
 
+// Adds an event listener to load the scan results when the popup is loaded
 document.addEventListener('DOMContentLoaded', load);
