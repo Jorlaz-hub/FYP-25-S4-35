@@ -1,0 +1,29 @@
+{
+  "manifest_version": 3,
+  "name": "Client-Side Script Security Inspector",
+  "version": "0.1.0",
+  "description": "Inspect and analyze client-side scripts and CSP on web pages.",
+  "action": {
+    "default_title": "Script Inspector",
+    "default_popup": "src/popup.html"
+  },
+  "options_page": "src/options.html",
+  "background": {
+    "service_worker": "src/background.js"
+  },
+  "permissions": [
+    "scripting",
+    "activeTab",
+    "storage"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["src/contentScript.js"],
+      "run_at": "document_end"
+    }
+  ]
+}
