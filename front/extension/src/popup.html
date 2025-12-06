@@ -7,12 +7,51 @@
     <link rel="stylesheet" href="./popup.css" />
   </head>
   <body>
-    <h1>Script Inspector</h1>
-    <label class="toggle-switch">
-      <input type="checkbox" id="scanToggle" />
-      <span class="slider"></span>
-    </label>
-    <div id="results">Loading...</div>
+    <header class="header">
+      <div>
+        <p class="eyebrow">Client-Side Script Security Inspector</p>
+        <h1>Script Inspector</h1>
+      </div>
+      <button id="scanBtn" type="button" class="ghost-btn">Scan now</button>
+    </header>
+
+    <div class="health-card">
+      <div class="health-top">
+        <div>
+          <div class="health-heading">Health</div>
+          <div class="health-sub">Page security posture</div>
+        </div>
+        <span class="health-badge" id="healthLabel">Ready</span>
+      </div>
+      <div class="health-meter">
+        <div class="ring" id="healthRing">
+          <div class="ring-inner">
+            <div class="health-score" id="healthScore">--</div>
+            <div class="health-caption" id="healthCaption">Awaiting scan</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="plugin-status">
+      <div class="plugin-copy">
+        <div class="plugin-title">Plugin Status</div>
+        <div class="plugin-value" id="pluginState">Ready</div>
+      </div>
+      <label class="toggle-switch">
+        <input type="checkbox" id="scanToggle" />
+        <span class="slider"></span>
+      </label>
+    </div>
+
+    <div id="status"></div>
+
+    <div class="actions">
+      <button id="fullReviewBtn" type="button" class="dark-btn">Full Review</button>
+      <button id="downloadBtn" type="button" class="dark-btn secondary">Download</button>
+    </div>
+
+    <div id="results" class="cards">Loading...</div>
     <script src="./popup.js"></script>
   </body>
 </html>
