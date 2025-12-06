@@ -13,6 +13,7 @@
   },
   "permissions": [
     "scripting",
+    "notifications",
     "activeTab",
     "storage"
   ],
