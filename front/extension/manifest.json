@@ -13,9 +13,9 @@
   },
   "permissions": [
     "scripting",
-    "notifications",
     "activeTab",
-    "storage"
+    "storage",
+    "webRequest"
   ],
   "host_permissions": [
     "<all_urls>"

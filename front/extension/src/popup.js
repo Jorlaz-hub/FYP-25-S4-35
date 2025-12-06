@@ -99,7 +99,12 @@ function computeAreaScores(info) {
     } catch (e) {}
   }
   var noIntegrity = info.scripts.filter(function (s) { return !!s.src && !s.integrity; }).length;
-  var noCsp = (info.cspMeta || []).length === 0;
+  var headers = info.responseHeaders || {};
+  var hdrs = {};
+  Object.keys(headers).forEach(function (k) { hdrs[k.toLowerCase()] = headers[k]; });
+
+  var hasCspHeader = !!hdrs['content-security-policy'];
+  var noCsp = !hasCspHeader && (info.cspMeta || []).length === 0;
   var inlineEvents = info.inlineEventHandlers || 0;
   var templateMarkers = info.templateMarkers || 0;
   var tokenHits = info.tokenHits || 0;
@@ -112,6 +117,10 @@ function computeAreaScores(info) {
 
   var security = 100;
   if (noCsp) security -= 15;
+  if (!hdrs['strict-transport-security']) security -= 8;
+  if (!hdrs['x-content-type-options']) security -= 6;
+  if (!hdrs['referrer-policy']) security -= 4;
+  if (!hdrs['permissions-policy']) security -= 4;
   security -= clamp(noIntegrity * 2, 0, 16);
   security -= clamp(thirdParty * 2, 0, 16);
   security -= clamp(inlineCount * 1.5, 0, 15);
@@ -310,7 +319,8 @@ function handleDownload() {
     health: latestHealth,
     areas: latestAreas || (latestEntry.result ? computeAreaScores(latestEntry.result) : null),
     scripts: latestEntry.result.scripts,
-    cspMeta: latestEntry.result.cspMeta
+    cspMeta: latestEntry.result.cspMeta,
+    responseHeaders: latestEntry.result.responseHeaders || {}
   };
   var blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
   var blobUrl = URL.createObjectURL(blob);

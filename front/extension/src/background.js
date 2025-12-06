@@ -1,6 +1,9 @@
 function clamp(n, min, max) { return Math.max(min, Math.min(max, n)); }
 function severity(val) { return val < 40 ? 'unsafe' : val <= 75 ? 'poor' : 'passed'; }
 
+// cache recent response headers per tab
+var latestHeadersByTab = {};
+
 function computeAreaScores(info) {
   if (!info || !info.scripts) {
     return {
@@ -28,7 +31,12 @@ function computeAreaScores(info) {
   }
 
   var noIntegrity = info.scripts.filter(function (s) { return !!s.src && !s.integrity; }).length;
-  var noCsp = (info.cspMeta || []).length === 0;
+  var headers = info.responseHeaders || {};
+  var hdrs = {};
+  Object.keys(headers).forEach(function (k) { hdrs[k.toLowerCase()] = headers[k]; });
+
+  var hasCspHeader = !!hdrs['content-security-policy'];
+  var noCsp = !hasCspHeader && (info.cspMeta || []).length === 0;
   var inlineEvents = info.inlineEventHandlers || 0;
   var templateMarkers = info.templateMarkers || 0;
   var tokenHits = info.tokenHits || 0;
@@ -41,6 +49,10 @@ function computeAreaScores(info) {
 
   var security = 100;
   if (noCsp) security -= 15;
+  if (!hdrs['strict-transport-security']) security -= 8;
+  if (!hdrs['x-content-type-options']) security -= 6;
+  if (!hdrs['referrer-policy']) security -= 4;
+  if (!hdrs['permissions-policy']) security -= 4;
   security -= clamp(noIntegrity * 2, 0, 16);
   security -= clamp(thirdParty * 2, 0, 16);
   security -= clamp(inlineCount * 1.5, 0, 15);
@@ -73,6 +85,10 @@ var HISTORY_LIMIT = 20;
 chrome.runtime.onMessage.addListener(function (message, sender) {
   if (message && message.kind === 'pageScanResult') {
     var key = 'scan:' + message.url;
+    var tabId = sender && sender.tab ? sender.tab.id : null;
+    var headerCache = tabId != null ? latestHeadersByTab[tabId] : null;
+    message.responseHeaders = headerCache ? headerCache.headers : {};
+
     chrome.storage.local.get(['scanEnabled', key], function (data) {
       if (data.scanEnabled === false) return;
       var list = data[key] || [];
@@ -83,4 +99,28 @@ chrome.runtime.onMessage.addListener(function (message, sender) {
       chrome.storage.local.set(obj);
     });
   }
+});
+
+chrome.webRequest.onHeadersReceived.addListener(
+  function (details) {
+    var wanted = [
+      'content-security-policy',
+      'strict-transport-security',
+      'x-content-type-options',
+      'referrer-policy',
+      'permissions-policy'
+    ];
+    var out = {};
+    (details.responseHeaders || []).forEach(function (h) {
+      var name = (h.name || '').toLowerCase();
+      if (wanted.indexOf(name) !== -1) out[name] = h.value || '';
+    });
+    latestHeadersByTab[details.tabId] = { url: details.url, headers: out, ts: Date.now() };
+  },
+  { urls: ['<all_urls>'], types: ['main_frame'] },
+  ['responseHeaders']
+);
+
+chrome.tabs.onRemoved.addListener(function (tabId) {
+  if (tabId in latestHeadersByTab) delete latestHeadersByTab[tabId];
 });
