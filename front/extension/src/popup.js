@@ -283,6 +283,11 @@ function runScan() {
   });
 }
 
+function handleRefresh() {
+  setStatus('Refreshing...');
+  loadResults();
+}
+
 function handleFullReview() {
   if (!latestEntry || !latestEntry.result) {
     setStatus('Run a scan first to view the full review.');
@@ -338,6 +343,11 @@ document.addEventListener('DOMContentLoaded', function () {
   var scanBtn = document.getElementById('scanBtn');
   if (scanBtn) {
     scanBtn.addEventListener('click', runScan);
+  }
+
+  var refreshBtn = document.getElementById('refreshBtn');
+  if (refreshBtn) {
+    refreshBtn.addEventListener('click', handleRefresh);
   }
 
   var fullReviewBtn = document.getElementById('fullReviewBtn');
