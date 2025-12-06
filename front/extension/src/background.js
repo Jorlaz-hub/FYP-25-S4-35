@@ -1,5 +1,3 @@
-var ICON_DATA_URL = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgYAAAAAMAASsJTYQAAAAASUVORK5CYII=';
-
 function clamp(n, min, max) { return Math.max(min, Math.min(max, n)); }
 function severity(val) { return val < 40 ? 'unsafe' : val <= 75 ? 'poor' : 'passed'; }
 
@@ -70,33 +68,7 @@ function computeAreaScores(info) {
   };
 }
 
-function estimateIssues(info) {
-  var issues = 0;
-  if (!info) return 0;
-  if ((info.cspMeta || []).length === 0) issues++;
-  if ((info.inlineScripts || 0) > 0) issues++;
-  if ((info.thirdPartyScripts || 0) > 3) issues++;
-  var noIntegrity = info.scripts ? info.scripts.filter(function (s) { return !!s.src && !s.integrity; }).length : 0;
-  if (noIntegrity > 5) issues++;
-  if ((info.inlineEventHandlers || 0) > 0) issues++;
-  if ((info.templateMarkers || 0) > 0) issues++;
-  if ((info.tokenHits || 0) > 0) issues++;
-  if ((info.formsWithoutCsrf || 0) > 0) issues++;
-  return issues;
-}
-
-function notifyScan(url, overallScore, overallSeverity, info) {
-  var issues = estimateIssues(info);
-  var title = 'Script Inspector: ' + overallSeverity.toUpperCase() + ' (' + overallScore + '%)';
-  var message = (issues > 0 ? (issues + ' issue(s) detected.') : 'No major issues detected.') + ' Open the popup for details.';
-  chrome.notifications.create({
-    type: 'basic',
-    iconUrl: ICON_DATA_URL,
-    title: title,
-    message: message,
-    contextMessage: url
-  });
-}
+var HISTORY_LIMIT = 20;
 
 chrome.runtime.onMessage.addListener(function (message, sender) {
   if (message && message.kind === 'pageScanResult') {
@@ -104,21 +76,11 @@ chrome.runtime.onMessage.addListener(function (message, sender) {
     chrome.storage.local.get(['scanEnabled', key], function (data) {
       if (data.scanEnabled === false) return;
       var list = data[key] || [];
-      var entry = { ts: Date.now(), result: message };
+      var entry = { ts: Date.now(), result: message, areas: computeAreaScores(message) };
       list.unshift(entry);
+      if (list.length > HISTORY_LIMIT) list = list.slice(0, HISTORY_LIMIT);
       var obj = {}; obj[key] = list;
       chrome.storage.local.set(obj);
-
-      var areas = computeAreaScores(message);
-      notifyScan(message.url, areas.overall.score, areas.overall.severity, message);
     });
   }
-});
-
-chrome.action.onClicked.addListener(function (tab) {
-  if (!tab.id) return;
-  chrome.scripting.executeScript({
-    target: { tabId: tab.id },
-    files: ['src/contentScript.js']
-  });
 });

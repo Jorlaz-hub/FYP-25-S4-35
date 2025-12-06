@@ -160,7 +160,7 @@
         var entry = list[0];
         var info = entry.result;
         document.getElementById('sourceUrl').textContent = info.url;
-        var areas = computeAreaScores(info);
+        var areas = entry.areas || computeAreaScores(info);
 
         setGauge('Overall', areas.overall.score, areas.overall.severity);
         setGauge('Structure', areas.structure.score, areas.structure.severity);

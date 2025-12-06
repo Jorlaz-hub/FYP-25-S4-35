@@ -212,7 +212,7 @@ function render(results) {
   // Use latest scan (list is unshifted in background)
   latestEntry = results[0];
   var latest = latestEntry.result;
-  latestAreas = computeAreaScores(latest);
+  latestAreas = latestEntry.areas || computeAreaScores(latest);
   latestHealth = latestAreas.overall;
   var angle = (latestHealth.score / 100) * 360;
   var caption = latestHealth.severity === 'passed' ? 'Secure posture' : latestHealth.severity === 'poor' ? 'Issues detected' : 'Unsafe';
@@ -303,7 +303,7 @@ function handleDownload() {
     url: latestEntry.result.url,
     scannedAt: latestEntry.ts ? new Date(latestEntry.ts).toISOString() : null,
     health: latestHealth,
-    areas: latestAreas,
+    areas: latestAreas || (latestEntry.result ? computeAreaScores(latestEntry.result) : null),
     scripts: latestEntry.result.scripts,
     cspMeta: latestEntry.result.cspMeta
   };
