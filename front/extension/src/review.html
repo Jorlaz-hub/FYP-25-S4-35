@@ -1,0 +1,69 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Script Inspector - Review</title>
+    <link rel="stylesheet" href="./review.css" />
+  </head>
+  <body>
+    <header class="review-header">
+      <div class="source">
+        <div class="eyebrow">Source</div>
+        <div class="source-url" id="sourceUrl">Loading...</div>
+      </div>
+      <button id="downloadBtn" class="ghost-btn">Download</button>
+    </header>
+
+    <main>
+      <section class="summary">
+        <div class="summary-title">Overall web page health</div>
+        <div class="gauges">
+          <div class="gauge" data-area="overall">
+            <div class="ring" id="ringOverall">
+              <div class="ring-inner">
+                <div class="score" id="scoreOverall">--</div>
+                <div class="sev" id="sevOverall">Awaiting scan</div>
+                <div class="label">Overall</div>
+              </div>
+            </div>
+          </div>
+          <div class="gauge" data-area="structure">
+            <div class="ring" id="ringStructure">
+              <div class="ring-inner">
+                <div class="score" id="scoreStructure">--</div>
+                <div class="sev" id="sevStructure">Awaiting scan</div>
+                <div class="label">Structure</div>
+              </div>
+            </div>
+          </div>
+          <div class="gauge" data-area="security">
+            <div class="ring" id="ringSecurity">
+              <div class="ring-inner">
+                <div class="score" id="scoreSecurity">--</div>
+                <div class="sev" id="sevSecurity">Awaiting scan</div>
+                <div class="label">Security</div>
+              </div>
+            </div>
+          </div>
+          <div class="gauge" data-area="exposure">
+            <div class="ring" id="ringExposure">
+              <div class="ring-inner">
+                <div class="score" id="scoreExposure">--</div>
+                <div class="sev" id="sevExposure">Awaiting scan</div>
+                <div class="label">Exposure</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="details">
+        <h3>Findings</h3>
+        <div id="findings"></div>
+      </section>
+    </main>
+
+    <script src="./review.js"></script>
+  </body>
+</html>

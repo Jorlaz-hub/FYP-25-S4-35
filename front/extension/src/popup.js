@@ -15,6 +15,7 @@ var STATE_COLORS = {
 var stateSnapshot = { enabled: true, hasResults: false };
 var latestEntry = null;
 var latestHealth = null;
+var latestAreas = null;
 
 function formatRow(label, value) {
   var row = document.createElement('div');
@@ -56,41 +57,8 @@ function setHealthDisplay(scoreText, severity, caption, angleDeg) {
 }
 
 function computeHealth(info) {
-  if (!info || !info.scripts) {
-    return { score: 0, severity: 'ready' };
-  }
-  var score = 100;
-  var inlineCount = 0;
-  var thirdParty = 0;
-  var pageOrigin = null;
-  try { pageOrigin = new URL(info.url).origin; } catch (e) {}
-
-  info.scripts.forEach(function (s) {
-    if (s.src) {
-      if (pageOrigin) {
-        try {
-          var scriptOrigin = new URL(s.src, info.url).origin;
-          if (scriptOrigin !== pageOrigin) thirdParty += 1;
-        } catch (e) {}
-      }
-    } else {
-      inlineCount += 1;
-    }
-  });
-
-  var noCsp = (info.cspMeta || []).length === 0;
-  var noIntegrity = info.scripts.filter(function (s) { return !!s.src && !s.integrity; }).length;
-
-  // Balanced penalties, no floor
-  if (noCsp) score -= 10;
-  score -= Math.min(inlineCount * 3, 18);
-  score -= Math.min(thirdParty * 2, 12);
-  score -= Math.min(noIntegrity * 1, 8);
-
-  score = Math.max(0, Math.min(100, score));
-  var severity = score < 40 ? 'unsafe' : score <= 75 ? 'poor' : 'passed';
-
-  return { score: Math.round(score * 100) / 100, severity: severity };
+  var scores = computeAreaScores(info);
+  return scores.overall;
 }
 
 function updateHealthNoData(state) {
@@ -99,6 +67,77 @@ function updateHealthNoData(state) {
   } else {
     setHealthDisplay('--', 'ready', 'Refresh or scan to get health', 0);
   }
+}
+
+function clamp(n, min, max) {
+  return Math.max(min, Math.min(max, n));
+}
+
+function computeAreaScores(info) {
+  if (!info || !info.scripts) {
+    return {
+      structure: { score: 0, severity: 'ready' },
+      security: { score: 0, severity: 'ready' },
+      exposure: { score: 0, severity: 'ready' },
+      overall: { score: 0, severity: 'ready' }
+    };
+  }
+
+  var inlineCount = info.inlineScripts != null ? info.inlineScripts : info.scripts.filter(function (s) { return !s.src; }).length;
+  var thirdParty = info.thirdPartyScripts != null ? info.thirdPartyScripts : 0;
+  if (thirdParty === 0) {
+    try {
+      var pageOrigin = new URL(info.url).origin;
+      info.scripts.forEach(function (s) {
+        if (s.src) {
+          try {
+            var scriptOrigin = new URL(s.src, info.url).origin;
+            if (scriptOrigin !== pageOrigin) thirdParty += 1;
+          } catch (e) {}
+        }
+      });
+    } catch (e) {}
+  }
+  var noIntegrity = info.scripts.filter(function (s) { return !!s.src && !s.integrity; }).length;
+  var noCsp = (info.cspMeta || []).length === 0;
+  var inlineEvents = info.inlineEventHandlers || 0;
+  var templateMarkers = info.templateMarkers || 0;
+  var tokenHits = info.tokenHits || 0;
+  var formsWithoutCsrf = info.formsWithoutCsrf || 0;
+
+  var structure = 100;
+  structure -= clamp(inlineCount * 3, 0, 25);
+  structure -= clamp(inlineEvents * 2, 0, 20);
+  structure -= clamp(templateMarkers * 3, 0, 15);
+
+  var security = 100;
+  if (noCsp) security -= 15;
+  security -= clamp(noIntegrity * 2, 0, 16);
+  security -= clamp(thirdParty * 2, 0, 16);
+  security -= clamp(inlineCount * 1.5, 0, 15);
+  try {
+    if (new URL(info.url).protocol !== 'https:') security -= 10;
+  } catch (e) {}
+
+  var exposure = 100;
+  exposure -= clamp(formsWithoutCsrf * 5, 0, 25);
+  exposure -= clamp(tokenHits * 4, 0, 20);
+  exposure -= clamp(thirdParty * 2, 0, 20);
+  exposure -= clamp(inlineCount * 1, 0, 10);
+
+  structure = clamp(structure, 0, 100);
+  security = clamp(security, 0, 100);
+  exposure = clamp(exposure, 0, 100);
+
+  function sev(val) { return val < 40 ? 'unsafe' : val <= 75 ? 'poor' : 'passed'; }
+
+  var overallScore = Math.round(((structure + security + exposure) / 3) * 100) / 100;
+  return {
+    structure: { score: Math.round(structure * 100) / 100, severity: sev(structure) },
+    security: { score: Math.round(security * 100) / 100, severity: sev(security) },
+    exposure: { score: Math.round(exposure * 100) / 100, severity: sev(exposure) },
+    overall: { score: overallScore, severity: sev(overallScore) }
+  };
 }
 
 function updateStateUI() {
@@ -173,7 +212,8 @@ function render(results) {
   // Use latest scan (list is unshifted in background)
   latestEntry = results[0];
   var latest = latestEntry.result;
-  latestHealth = computeHealth(latest);
+  latestAreas = computeAreaScores(latest);
+  latestHealth = latestAreas.overall;
   var angle = (latestHealth.score / 100) * 360;
   var caption = latestHealth.severity === 'passed' ? 'Secure posture' : latestHealth.severity === 'poor' ? 'Issues detected' : 'Unsafe';
   setHealthDisplay(latestHealth.score + '%', latestHealth.severity, caption, angle);
@@ -248,23 +288,10 @@ function handleFullReview() {
     setStatus('Run a scan first to view the full review.');
     return;
   }
-  var ts = latestEntry.ts ? new Date(latestEntry.ts).toISOString() : 'unknown';
-  var healthLine = latestHealth ? (latestHealth.score + '% (' + latestHealth.severity.toUpperCase() + ')') : 'n/a';
-  var report = [
-    'Script Inspector Report',
-    'URL: ' + latestEntry.result.url,
-    'Scanned at: ' + ts,
-    'Health: ' + healthLine,
-    '',
-    'Scripts: ' + latestEntry.result.scripts.length,
-    'CSP Meta Tags: ' + (latestEntry.result.cspMeta || []).length,
-    '',
-    'Details:',
-    JSON.stringify(latestEntry.result, null, 2)
-  ].join('\n');
-
-  var url = 'data:text/plain;charset=utf-8,' + encodeURIComponent(report);
-  chrome.tabs.create({ url: url });
+  var key = 'scan:' + latestEntry.result.url;
+  chrome.storage.local.set({ reviewTargetKey: key }, function () {
+    chrome.tabs.create({ url: chrome.runtime.getURL('src/review.html') });
+  });
 }
 
 function handleDownload() {
@@ -276,6 +303,7 @@ function handleDownload() {
     url: latestEntry.result.url,
     scannedAt: latestEntry.ts ? new Date(latestEntry.ts).toISOString() : null,
     health: latestHealth,
+    areas: latestAreas,
     scripts: latestEntry.result.scripts,
     cspMeta: latestEntry.result.cspMeta
   };
