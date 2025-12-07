@@ -41,4 +41,20 @@ function load() {
 }
 
 // Adds an event listener to load the scan results when the popup is loaded
-document.addEventListener('DOMContentLoaded', load);
+// Persist and restore the Inspect toggle so popup state survives close/open.
+document.addEventListener('DOMContentLoaded', function () {
+  load(); // render recent scans
+
+  var toggle = document.getElementById('inspectToggle');
+  if (!toggle) return; // safe if toggle not present yet
+
+  // Restore state on popup open
+  chrome.storage.local.get(['inspectEnabled'], function (obj) {
+    toggle.checked = !!obj.inspectEnabled;
+  });
+
+  // Persist on change
+  toggle.addEventListener('change', function () {
+    chrome.storage.local.set({ inspectEnabled: toggle.checked });
+  });
+});

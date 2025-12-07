@@ -8,10 +8,14 @@
   </head>
   <body>
     <h1>Script Inspector</h1>
-    <label class="toggle-switch">
-      <input type="checkbox" id="scanToggle" />
-      <span class="slider"></span>
-    </label>
+    <!-- Toggle persisted via chrome.storage in popup.js -->
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+      <span>Inspection</span>
+      <label class="toggle-switch" title="Enable/disable Scan">
+        <input type="checkbox" id="inspectToggle" />
+        <span class="slider"></span>
+      </label>
+    </div>
     <div id="results">Loading...</div>
     <script src="./popup.js"></script>
   </body>

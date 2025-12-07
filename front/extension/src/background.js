@@ -39,3 +39,32 @@ chrome.action.onClicked.addListener(function (tab) {
     files: ['src/contentScript.js']
   });
 });
+
+// Reflect toggle state via badge and gate auto behavior.
+// This helps users see if inspection is enabled even when popup is closed.
+(function initBadgeAndBehavior() {
+  // Set initial badge at startup and install
+  var setFromStorage = function () {
+    chrome.storage.local.get(['inspectEnabled'], function (obj) {
+      var enabled = !!obj.inspectEnabled;
+      chrome.action.setBadgeText({ text: enabled ? 'ON' : '' });
+      chrome.action.setBadgeBackgroundColor({ color: enabled ? '#2e7d32' : '#00000000' });
+    });
+  };
+
+  if (chrome.runtime.onStartup) {
+    chrome.runtime.onStartup.addListener(setFromStorage);
+  }
+  if (chrome.runtime.onInstalled) {
+    chrome.runtime.onInstalled.addListener(setFromStorage);
+  }
+  setFromStorage();
+
+  // Update badge when toggle changes
+  chrome.storage.onChanged.addListener(function (changes, area) {
+    if (area !== 'local' || !changes.inspectEnabled) return;
+    var enabled = !!changes.inspectEnabled.newValue;
+    chrome.action.setBadgeText({ text: enabled ? 'ON' : '' });
+    chrome.action.setBadgeBackgroundColor({ color: enabled ? '#2e7d32' : '#00000000' });
+  });
+})();
