@@ -6,6 +6,8 @@
 // 3) Try fetching external scripts (same-origin/CORS allowed).
 // 4) If fetch fails (likely due to CORS), ask background to fetch.
 // 5) Send results to background for storage/inspection.
+// WIP
+
 (function () {
   var toArray = function (list) { return Array.prototype.slice.call(list); };
 
