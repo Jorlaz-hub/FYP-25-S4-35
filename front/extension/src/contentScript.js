@@ -1,7 +1,8 @@
 (function () {
+  // Gather script information
   var scripts = Array.prototype.slice.call(document.scripts).map(function (s) {
     return {
-      src: s.src || null,
+      src: s.src || null, 
       inlineLength: s.src ? 0 : (s.textContent || '').length,
       type: s.type || 'text/javascript',
       hasNonce: !!s.nonce,
