@@ -1,3 +1,11 @@
+/**
+ * Client-Side Script Security Inspector - Background Controller
+ * Scoring logic and detection features
+ * Updates: 
+ * 1. Insecure Forms (GET method / external actions)
+ * 2. Unsafe Links (Reverse Tabnabbing)
+ */
+
 function clamp(n, min, max) { return Math.max(min, Math.min(max, n)); }
 function severity(val) { return val < 40 ? 'unsafe' : val <= 75 ? 'poor' : 'passed'; }
 
@@ -14,8 +22,11 @@ function computeAreaScores(info) {
     };
   }
 
+  // --- DATA EXTRACTION ---
   var inlineCount = info.inlineScripts != null ? info.inlineScripts : info.scripts.filter(function (s) { return !s.src; }).length;
   var thirdParty = info.thirdPartyScripts != null ? info.thirdPartyScripts : 0;
+  
+  // simple 3rd party calculation logics
   if (thirdParty === 0) {
     try {
       var pageOrigin = new URL(info.url).origin;
@@ -42,11 +53,18 @@ function computeAreaScores(info) {
   var tokenHits = info.tokenHits || 0;
   var formsWithoutCsrf = info.formsWithoutCsrf || 0;
 
+  // --- SCORING LOGIC MODEL ---
+
+  // structure score
   var structure = 100;
   structure -= clamp(inlineCount * 3, 0, 25);
   structure -= clamp(inlineEvents * 2, 0, 20);
   structure -= clamp(templateMarkers * 3, 0, 15);
+  
+  // detect and penalize reverse tabnabbing
+  structure -= clamp((info.unsafeLinks || 0) * 2, 0, 10);
 
+  // security score
   var security = 100;
   if (noCsp) security -= 15;
   if (!hdrs['strict-transport-security']) security -= 8;
@@ -60,12 +78,18 @@ function computeAreaScores(info) {
     if (new URL(info.url).protocol !== 'https:') security -= 10;
   } catch (e) {}
 
+  // exposure score
   var exposure = 100;
   exposure -= clamp(formsWithoutCsrf * 5, 0, 25);
   exposure -= clamp(tokenHits * 4, 0, 20);
   exposure -= clamp(thirdParty * 2, 0, 20);
   exposure -= clamp(inlineCount * 1, 0, 10);
+  
+  // detect and penalize insecure forms
+  // forms using GET (for passwords) or external links present risks of data leakage
+  exposure -= clamp((info.insecureForms || 0) * 10, 0, 20);
 
+  // --- CALC FINAL TOTAL ---
   structure = clamp(structure, 0, 100);
   security = clamp(security, 0, 100);
   exposure = clamp(exposure, 0, 100);
@@ -80,6 +104,7 @@ function computeAreaScores(info) {
   };
 }
 
+// set scan data history limit (potentially lower for more lightweight)
 var HISTORY_LIMIT = 20;
 
 chrome.runtime.onMessage.addListener(function (message, sender) {
