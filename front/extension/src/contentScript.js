@@ -45,6 +45,34 @@
       };
     });
 
+  function detectObfuscation(text) {
+    if (!text || text.length < 60) return false;
+
+      // Heuristic: Search for a continuous block of 60+ alphanumeric characters.
+      var highEntropyPattern = /[A-Za-z0-9+/=]{40,}/;
+      var packedPattern = /(eval\(function|\bwhile\s*\(\s*1\s*\)|function\(p,a,c,k,e,d\))/;
+
+      return highEntropyPattern.test(text) || packedPattern.test(text);
+    }
+
+    var scripts = Array.prototype.slice.call(document.scripts).map(function (s) {
+      var content = s.src ? '' : (s.textContent.trim() || '');
+
+      return {
+        src: s.src || null,
+        inlineLength: s.src ? 0 : content.length,
+        type: s.type || 'text/javascript',
+        hasNonce: !!s.nonce,
+        integrity: s.integrity || null,
+
+        // Flag as true if the inline code matches obfuscation pattern
+        isObfuscated: detectObfuscation(content),
+        textSample: s.src ? '' : content.slice(0, 2000)
+      };
+    });
+
+  
+
     // calculate high-level stats for the report
     var inlineScripts = scripts.filter(function (s) { return !s.src; }).length;
     var externalScripts = scripts.length - inlineScripts;
