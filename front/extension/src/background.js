@@ -66,7 +66,25 @@ function computeAreaScores(info) {
 
   // security score
   var security = 100;
-  if (noCsp) security -= 15;
+
+  // 1. Check for CSP presence
+  if (noCsp) {
+    security -= 15;
+  } 
+  else {
+  // 2. Check for CSP Quality (New Improvement)
+  var cspVal = (hdrs['content-security-policy'] || '').toLowerCase();
+
+  // Penalize unsafe-inline (very risky)
+  if (cspVal.indexOf("'unsafe-inline'") !== -1) security -= 10;
+
+  // Penalize unsafe-eval (risky)
+  if (cspVal.indexOf("'unsafe-eval'") !== -1) security -= 5;
+
+  // Penalize data: URI usage (evades restrictions)
+  if (cspVal.indexOf("data:") !== -1) security -= 3;
+  }
+
   if (!hdrs['strict-transport-security']) security -= 8;
   if (!hdrs['x-content-type-options']) security -= 6;
   if (!hdrs['referrer-policy']) security -= 4;
@@ -77,6 +95,18 @@ function computeAreaScores(info) {
   try {
     if (new URL(info.url).protocol !== 'https:') security -= 10;
   } catch (e) {}
+
+
+
+  // for obfuscatedCount
+  var obfuscatedCount = info.scripts.filter(function (s) { 
+    return s.isObfuscated; 
+  }).length;
+
+  if (obfuscatedCount > 0) {
+    security -= (obfuscatedCount * 10);
+  }
+
 
   // exposure score
   var exposure = 100;
@@ -95,6 +125,7 @@ function computeAreaScores(info) {
   exposure = clamp(exposure, 0, 100);
 
   var overallScore = Math.round(((structure + security + exposure) / 3) * 100) / 100;
+
 
   return {
     structure: { score: Math.round(structure * 100) / 100, severity: severity(structure) },
