@@ -336,6 +336,12 @@ function handleDownload() {
   setStatus('Report downloaded.');
 }
 
+function handleRepository() {
+  chrome.tabs.create({
+    url: 'https://github.com/Jorlaz-hub/FYP-25-S4-35.git'
+  });
+}
+
 document.addEventListener('DOMContentLoaded', function () {
   var toggle = document.getElementById('scanToggle');
   if (toggle) {
@@ -368,6 +374,11 @@ document.addEventListener('DOMContentLoaded', function () {
   var downloadBtn = document.getElementById('downloadBtn');
   if (downloadBtn) {
     downloadBtn.addEventListener('click', handleDownload);
+  }
+
+  var repoBtn = document.getElementById('repoBtn');
+  if (repoBtn) {
+    repoBtn.addEventListener('click', handleRepository);
   }
 
   loadToggle();
