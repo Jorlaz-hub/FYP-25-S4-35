@@ -65,10 +65,24 @@ main {
 }
 
 .gauges {
+  /* Grid places Overall on the first row spanning all columns,
+     and the three category gauges below in three columns. */
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(3, minmax(200px, 1fr));
+  gap: 20px;
   justify-items: center;
+  align-items: start;
+}
+
+/* Make the Overall gauge take the full row above */
+.gauge[data-area="overall"] {
+  grid-column: 1 / -1; /* span across all 3 columns */
+}
+
+/* Enlarge the Overall gauge to emphasize it */
+.gauge[data-area="overall"] .ring {
+  width: 240px;
+  height: 240px;
 }
 
 .gauge .ring {
@@ -116,6 +130,18 @@ main {
   text-transform: uppercase;
   letter-spacing: 0.05em;
   font-weight: 800;
+}
+
+/* Responsive: stack gauges on smaller screens */
+@media (max-width: 800px) {
+  .gauges {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  .gauge[data-area="overall"] .ring {
+    width: 220px;
+    height: 220px;
+  }
 }
 
 .details {
