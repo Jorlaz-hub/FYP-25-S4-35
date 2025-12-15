@@ -27,10 +27,31 @@
         <span class="health-badge" id="healthLabel">Ready</span>
       </div>
       <div class="health-meter">
+        <!-- Current scan ring -->
         <div class="ring" id="healthRing">
           <div class="ring-inner">
             <div class="health-score" id="healthScore">--</div>
             <div class="health-caption" id="healthCaption">Awaiting scan</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="health-card" id="previousHealthCard" style="display: none;">
+      <div class="health-top">
+        <div>
+          <div class="health-heading">Health Before</div>
+          <div class="health-sub">Previous Page Security Posture</div>
+        </div>
+        <span class="health-badge" id="healthLabelBefore">--</span>
+      </div>
+
+      <div class="health-meter">
+        <!-- Previous scan ring -->
+        <div class="ring" id="healthRingBefore">
+          <div class="ring-inner">
+            <div class="health-score" id="healthScoreBefore">--</div>
+            <div class="health-caption" id="healthCaptionBefore">Before scan</div>
           </div>
         </div>
       </div>
