@@ -56,6 +56,30 @@ function setHealthDisplay(scoreText, severity, caption, angleDeg) {
   }
 }
 
+function setPreviousHealthRing(score, severity, caption, angleDeg) {
+  const card = document.getElementById('previousHealthCard');
+  const ring = document.getElementById('healthRingBefore');
+  const scoreEl = document.getElementById('healthScoreBefore');
+  const captionEl = document.getElementById('healthCaptionBefore');
+  const labelEl = document.getElementById('healthLabelBefore');
+  const color = HEALTH_COLORS[severity] || '#94a3b8';
+
+  if (!card || !ring || !scoreEl || !captionEl || !labelEl) return;
+
+  // Show/hide card
+  card.style.display = score !== null ? 'block' : 'none';
+
+  scoreEl.textContent = score + '%';
+  captionEl.textContent = caption;
+  labelEl.textContent = severity === 'passed' ? 'PASSED' : severity === 'poor' ? 'POOR' : severity.toUpperCase();
+  labelEl.style.background = color + '1a';
+  labelEl.style.color = color;
+  labelEl.style.borderColor = color + '33';
+
+  ring.style.setProperty('--health-angle', (angleDeg || 0) + 'deg');
+  ring.style.setProperty('--health-color', color);
+}
+
 function computeHealth(info) {
   var scores = computeAreaScores(info);
   return scores.overall;
@@ -226,6 +250,27 @@ function render(results) {
   var angle = (latestHealth.score / 100) * 360;
   var caption = latestHealth.severity === 'passed' ? 'Secure posture' : latestHealth.severity === 'poor' ? 'Issues detected' : 'Unsafe';
   setHealthDisplay(latestHealth.score + '%', latestHealth.severity, caption, angle);
+
+  if (results.length >= 2) {
+    previousEntry = results[1];
+    previousAreas = previousEntry.areas || computeAreaScores(previousEntry.result);
+    previousHealth = previousAreas.overall;
+
+    // Only show previous if score is different
+    setPreviousHealthRing(
+      previousHealth.score !== latestHealth.score ? previousHealth.score : null,
+      previousHealth.severity,
+      previousHealth.severity === 'passed' ? 'Secure posture' 
+        : previousHealth.severity === 'poor' ? 'Issues detected' : 'Unsafe',
+      (previousHealth.score / 100) * 360
+    );
+  } else {
+    setPreviousHealthRing(null);
+  }
+
+  const meter = document.querySelector('.health-meter');
+  const visibleRings = [...meter.querySelectorAll('.ring')].filter(r => r.offsetParent !== null);
+  meter.style.justifyContent = visibleRings.length === 1 ? 'center' : 'space-between';
 
   results.slice(0, 10).forEach(function (r) {
     var w = document.createElement('div');
