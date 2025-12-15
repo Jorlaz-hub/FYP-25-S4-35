@@ -177,3 +177,84 @@ main {
   color: #475569;
   font-size: 13px;
 }
+
+/* -------- Area Cards (Structure/Security/Exposure) -------- */
+.areas {
+  margin-top: 24px;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 20px;
+}
+
+.area-card {
+  border-radius: 14px;
+  padding: 20px;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.12);
+  border: 1px solid #e2e8f0;
+}
+
+.area-card.structure { background: #e9f7ee; }
+.area-card.security  { background: #fff6e6; }
+.area-card.exposure  { background: #ffeef1; }
+
+.area-title {
+  font-size: 34px;
+  font-weight: 900;
+  letter-spacing: 0.02em;
+  margin: 0 0 12px;
+}
+
+.area-subtitle {
+  margin: 0 0 10px;
+  font-weight: 800;
+}
+
+.progress {
+  position: relative;
+  height: 16px;
+  background: #e2e8f0;
+  border-radius: 8px;
+  box-shadow: inset 0 2px 4px rgba(15, 23, 42, 0.12), 0 2px 0 #cbd5e1;
+  overflow: hidden;
+}
+.progress .bar {
+  height: 100%;
+  width: 0%;
+  background: #22c55e; /* default green, will be set inline */
+  transition: width 300ms ease;
+}
+.progress .value {
+  position: absolute;
+  right: 8px;
+  top: -28px;
+  font-weight: 900;
+  font-size: 22px;
+}
+
+.insights {
+  margin-top: 16px;
+}
+
+.insights h4 { margin: 0 0 10px; }
+
+.insights details {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+  box-shadow: 0 3px 0 #cbd5e1;
+}
+.insights details > summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+.insights details > p {
+  margin: 8px 0 0;
+  color: #475569;
+  font-size: 13px;
+}
+
+@media (min-width: 900px) {
+  .areas { grid-template-columns: 1fr; }
+}

@@ -126,6 +126,82 @@
     });
   }
 
+  function renderAreaCards(info, areas) {
+    var container = document.getElementById('areas');
+    if (!container) return;
+    container.innerHTML = '';
+
+    var pageOrigin = null;
+    try { pageOrigin = new URL(info.url).origin; } catch (e) {}
+    var inlineCount = info.inlineScripts != null ? info.inlineScripts : info.scripts.filter(function (s) { return !s.src; }).length;
+    var thirdParty = info.thirdPartyScripts != null ? info.thirdPartyScripts : (function(){
+      var n = 0;
+      (info.scripts || []).forEach(function (s) {
+        if (s.src) {
+          try { if (new URL(s.src, info.url).origin !== pageOrigin) n += 1; } catch (e) {}
+        }
+      });
+      return n;
+    })();
+    var noIntegrity = (info.scripts || []).filter(function (s) { return !!s.src && !s.integrity; }).length;
+    var headers = info.responseHeaders || {}; var hdrs = {}; Object.keys(headers).forEach(function (k) { hdrs[k.toLowerCase()] = headers[k]; });
+    var hasCspHeader = !!hdrs['content-security-policy'];
+
+    function barColor(sev) {
+      return { unsafe: '#ef4444', poor: '#f59e0b', passed: '#22c55e', ready: '#94a3b8' }[sev] || '#94a3b8';
+    }
+
+    function mkInsight(title, body) {
+      var d = document.createElement('details');
+      var s = document.createElement('summary'); s.textContent = title;
+      var p = document.createElement('p'); p.textContent = body;
+      d.appendChild(s); d.appendChild(p); return d;
+    }
+
+    function card(areaKey, title, score, sev, insightItems, themeClass) {
+      var card = document.createElement('section');
+      card.className = 'area-card ' + themeClass;
+      var h = document.createElement('h2'); h.className = 'area-title'; h.textContent = title;
+      var sub = document.createElement('div'); sub.className = 'area-subtitle'; sub.textContent = title + ' Health:';
+      var prog = document.createElement('div'); prog.className = 'progress';
+      var bar = document.createElement('div'); bar.className = 'bar'; bar.style.background = barColor(sev); bar.style.width = Math.round(score) + '%';
+      var val = document.createElement('div'); val.className = 'value'; val.textContent = (score ? score.toFixed(2) : '0') + '%';
+      prog.appendChild(bar); prog.appendChild(val);
+      var insights = document.createElement('div'); insights.className = 'insights';
+      var ih = document.createElement('h4'); ih.textContent = 'Insights'; insights.appendChild(ih);
+      insightItems.forEach(function (it) { insights.appendChild(mkInsight(it.title, it.body)); });
+      card.appendChild(h); card.appendChild(sub); card.appendChild(prog); card.appendChild(insights);
+      container.appendChild(card);
+    }
+
+    // Build insights from available metrics to avoid speculative claims
+    var structureInsights = [
+      inlineCount > 0 ?
+        { title: 'Inline scripts detected', body: inlineCount + ' inline <script> tag(s) present. Consider moving to external files.' } :
+        { title: 'No inline scripts detected', body: 'All script code appears to be externalized.' },
+      { title: 'Template markers', body: String(info.templateMarkers || 0) + ' potential template markers found.' },
+      { title: 'Inline event handlers', body: String(info.inlineEventHandlers || 0) + ' inline event handler(s) detected.' }
+    ];
+
+    var securityInsights = [
+      hasCspHeader ?
+        { title: 'CSP header present', body: 'Content-Security-Policy header detected.' } :
+        { title: 'No CSP header', body: 'No CSP response header detected; consider adding one.' },
+      { title: 'SRI on external scripts', body: (info.scripts.length - noIntegrity - inlineCount) + ' with SRI, ' + noIntegrity + ' without.' },
+      { title: 'Security headers', body: 'HSTS: ' + (!!hdrs['strict-transport-security']) + ', X-CTO: ' + (!!hdrs['x-content-type-options']) + ', Referrer-Policy: ' + (!!hdrs['referrer-policy']) }
+    ];
+
+    var exposureInsights = [
+      { title: 'Third-party scripts', body: thirdParty + ' script(s) loaded from third-party origins.' },
+      { title: 'Token-like strings', body: String(info.tokenHits || 0) + ' potential token/secret matches.' },
+      { title: 'Forms without CSRF', body: String(info.formsWithoutCsrf || 0) + ' of ' + String(info.formsTotal || 0) }
+    ];
+
+    card('structure', 'Structure', areas.structure.score, areas.structure.severity, structureInsights, 'structure');
+    card('security', 'Security', areas.security.score, areas.security.severity, securityInsights, 'security');
+    card('exposure', 'Exposure', areas.exposure.score, areas.exposure.severity, exposureInsights, 'exposure');
+  }
+
   function handleDownload(data, areas) {
     var payload = {
       url: data.url,
@@ -178,6 +254,7 @@
         setGauge('Exposure', areas.exposure.score, areas.exposure.severity);
 
         renderFindings(info);
+        renderAreaCards(info, areas);
 
         var dl = document.getElementById('downloadBtn');
         if (dl) {
