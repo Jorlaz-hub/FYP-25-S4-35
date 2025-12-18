@@ -381,9 +381,9 @@ function handleDownload() {
   setStatus('Report downloaded.');
 }
 
-function handleRepository() {
+function handleMore() {
   chrome.tabs.create({
-    url: 'https://github.com/Jorlaz-hub/FYP-25-S4-35.git'
+    url: chrome.runtime.getURL('src/more.html')
   });
 }
 
@@ -421,9 +421,9 @@ document.addEventListener('DOMContentLoaded', function () {
     downloadBtn.addEventListener('click', handleDownload);
   }
 
-  var repoBtn = document.getElementById('repoBtn');
-  if (repoBtn) {
-    repoBtn.addEventListener('click', handleRepository);
+  var moreBtn = document.getElementById('moreBtn');
+  if (moreBtn) {
+    moreBtn.addEventListener('click', handleMore);
   }
 
   loadToggle();
