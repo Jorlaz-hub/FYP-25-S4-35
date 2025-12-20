@@ -66,6 +66,15 @@ function setPreviousHealthRing(score, severity, caption, angleDeg) {
 
   if (!card || !ring || !scoreEl || !captionEl || !labelEl) return;
 
+  if (score === null) {
+    card.style.display = 'none';
+    return;
+  }
+
+  const color = HEALTH_COLORS[severity] || '#94a3b8';
+
+  card.style.display = 'block';
+
   // Show/hide card
   card.style.display = score !== null ? 'block' : 'none';
 
