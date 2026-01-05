@@ -313,3 +313,9 @@ main {
 @media (min-width: 900px) {
   .areas { grid-template-columns: 1fr; }
 }
+
+/* Card colors by severity */
+.area-card.sev-unsafe  { background: #fee2e2; border-color: #fecaca; }
+.area-card.sev-poor    { background: #fef3c7; border-color: #fde68a; }
+.area-card.sev-passed  { background: #dcfce7; border-color: #bbf7d0; }
+.area-card.sev-ready   { background: #e2e8f0; border-color: #cbd5e1; }

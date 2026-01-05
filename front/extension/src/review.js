@@ -230,7 +230,7 @@
 
     function card(areaKey, title, score, sev, insightItems, themeClass) {
       var card = document.createElement('section');
-      card.className = 'area-card ' + themeClass;
+      card.className = 'area-card ' + themeClass + ' sev-' + sev;
       var h = document.createElement('h2'); h.className = 'area-title'; h.textContent = title;
       var sub = document.createElement('div'); sub.className = 'area-subtitle'; sub.textContent = title + ' Health:';
       var prog = document.createElement('div'); prog.className = 'progress';
