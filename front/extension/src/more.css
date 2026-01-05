@@ -64,3 +64,20 @@ button {
   width: 100%;
   margin: 15px 0;
 }
+
+.scan-entry {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+  cursor: pointer;
+}
+
+.scan-entry input {
+  cursor: pointer;
+}
+
+.site-title {
+  margin: 10px 0 5px;
+  font-size: 14px;
+}
