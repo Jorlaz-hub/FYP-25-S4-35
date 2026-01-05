@@ -283,6 +283,33 @@ main {
   margin-top: 6px;
 }
 
+/* Tabs for inline snippet previews */
+.insights .snippet-tabs { margin-top: 8px; }
+.insights .tab-list {
+  display: flex;
+  gap: 6px;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  padding-bottom: 6px;
+}
+.insights .tab-btn {
+  appearance: none;
+  border: 1px solid #cbd5e1;
+  background: #f1f5f9;
+  color: #0f172a;
+  font-weight: 700;
+  font-size: 12px;
+  border-radius: 8px;
+  padding: 6px 10px;
+  cursor: pointer;
+}
+.insights .tab-btn.active {
+  background: #0f172a;
+  color: #e2e8f0;
+  border-color: #0f172a;
+}
+.insights .tab-panel { margin-top: 10px; }
+
 @media (min-width: 900px) {
   .areas { grid-template-columns: 1fr; }
 }
