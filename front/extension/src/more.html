@@ -1,32 +1,47 @@
 <!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <title>Others</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <link rel="stylesheet" href="./more.css" />
-</head>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Script Inspector More</title>
+    <link rel="stylesheet" href="./more.css" />
+  </head>
+  <body>
+    <div class="page">
+      <h1>Script Inspector More</h1>
+      <p class="subhead">Access resources and export your scan history.</p>
 
-<body>
-  <div class="center-container">
+      <div class="card">
+        <h2>Resources</h2>
+        <div class="row">
+          <div class="copy">
+            <div class="title">Repository</div>
+            <div class="desc">Open the project repository in a new tab.</div>
+          </div>
+          <button id="repoBtn" type="button">View repository</button>
+        </div>
+        <div class="row">
+          <div class="copy">
+            <div class="title">History</div>
+            <div class="desc">Load stored scan history for this browser.</div>
+          </div>
+          <button id="historyBtn" type="button">View history</button>
+        </div>
+      </div>
 
-    <h1>Others</h1>
-
-    <!-- Buttons -->
-    <div class="button-group action-buttons">
-      <button id="repoBtn">View Repository</button>
-      <button id="historyBtn">View History</button>
+      <div class="card">
+        <h2>History Snapshot</h2>
+        <div id="historyContainer" class="history-container">No history loaded yet.</div>
+        <div class="row row-actions">
+          <div class="copy">
+            <div class="title">Download history</div>
+            <div class="desc">Export stored scans as a JSON file.</div>
+          </div>
+          <button id="downloadBtn" type="button">Download</button>
+        </div>
+      </div>
     </div>
 
-    <!-- History -->
-    <div id="historyContainer"></div>
-
-    <div class="download-btn action-buttons">
-        <button id="downloadHistoryBtn">Download History</button>
-    </div>
-
-  </div>
-
-  <script src="./more.js"></script>
-</body>
+    <script src="./more.js"></script>
+  </body>
 </html>
