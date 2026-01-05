@@ -154,8 +154,25 @@
     function mkInsight(title, body) {
       var d = document.createElement('details');
       var s = document.createElement('summary'); s.textContent = title;
-      var p = document.createElement('p'); p.textContent = body;
-      d.appendChild(s); d.appendChild(p); return d;
+      d.appendChild(s);
+      if (Array.isArray(body)) {
+        body.forEach(function (node) {
+          if (node && (node.nodeType === 1 || node.nodeType === 3)) {
+            d.appendChild(node);
+          } else {
+            var p = document.createElement('p');
+            p.textContent = String(node);
+            d.appendChild(p);
+          }
+        });
+      } else if (body && (body.nodeType === 1 || body.nodeType === 3)) {
+        d.appendChild(body);
+      } else {
+        var p = document.createElement('p');
+        p.textContent = String(body || '');
+        d.appendChild(p);
+      }
+      return d;
     }
 
     function card(areaKey, title, score, sev, insightItems, themeClass) {
@@ -182,6 +199,52 @@
       { title: 'Template markers', body: String(info.templateMarkers || 0) + ' potential template markers found.' },
       { title: 'Inline event handlers', body: String(info.inlineEventHandlers || 0) + ' inline event handler(s) detected.' }
     ];
+
+    // Integrate inline script snippet previews into the "Inline scripts detected" insight
+    try {
+      if (inlineCount > 0) {
+        var inlineScriptsList = (info.scripts || []).filter(function (s) { return !s.src && (s.textSample || '').length; });
+        var bodyNodes = [];
+        // Intro text with count
+        var intro = document.createElement('p');
+        intro.textContent = inlineCount + ' inline <script> tag(s) present. Consider moving to external files.';
+        bodyNodes.push(intro);
+
+        if (inlineScriptsList.length) {
+          var cap = 10;
+          inlineScriptsList.forEach(function (s, idx) {
+            if (idx >= cap) return;
+            var wrap = document.createElement('div');
+            wrap.className = 'insight-snippet-wrap';
+            var lbl = document.createElement('div');
+            lbl.className = 'snippet-label';
+            var len = s.inlineLength != null ? s.inlineLength : (s.textSample || '').length;
+            lbl.textContent = 'Snippet #' + (idx + 1) + ' (' + len + ' chars)';
+            var pre = document.createElement('pre');
+            pre.className = 'insight-snippet';
+            pre.textContent = s.textSample || '';
+            wrap.appendChild(lbl);
+            wrap.appendChild(pre);
+            bodyNodes.push(wrap);
+          });
+          if (inlineScriptsList.length > cap) {
+            var more = document.createElement('p');
+            more.className = 'snippet-more';
+            more.textContent = 'Showing ' + cap + ' of ' + inlineScriptsList.length + ' inline scripts.';
+            bodyNodes.push(more);
+          }
+        } else {
+          var none = document.createElement('p');
+          none.textContent = 'No inline snippet captured.';
+          bodyNodes.push(none);
+        }
+
+        // Replace the first structure insight to include snippets
+        structureInsights[0] = { title: 'Inline scripts detected', body: bodyNodes };
+      }
+    } catch (e) {
+      // Keep original insight text on failure
+    }
 
     var securityInsights = [
       hasCspHeader ?

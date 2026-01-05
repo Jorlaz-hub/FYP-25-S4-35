@@ -255,6 +255,34 @@ main {
   font-size: 13px;
 }
 
+/* Inline script snippet styling */
+.insights .insight-snippet-wrap { margin: 8px 0; }
+.insights .snippet-label {
+  font-size: 12px;
+  color: #334155;
+  margin-bottom: 6px;
+  font-weight: 700;
+}
+.insights pre.insight-snippet {
+  background: #0f172a;
+  color: #e2e8f0;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 10px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 220px;
+  overflow: auto;
+}
+.insights .snippet-more {
+  font-size: 12px;
+  color: #64748b;
+  margin-top: 6px;
+}
+
 @media (min-width: 900px) {
   .areas { grid-template-columns: 1fr; }
 }
