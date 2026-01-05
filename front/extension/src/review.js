@@ -148,7 +148,7 @@
     var hasCspHeader = !!hdrs['content-security-policy'];
 
     function barColor(sev) {
-      return { unsafe: '#ef4444', poor: '#f59e0b', passed: '#22c55e', ready: '#94a3b8' }[sev] || '#94a3b8';
+      return HEALTH_COLORS[sev] || '#94a3b8';
     }
 
     function mkInsight(title, body) {
@@ -230,7 +230,11 @@
 
     function card(areaKey, title, score, sev, insightItems, themeClass) {
       var card = document.createElement('section');
-      card.className = 'area-card ' + themeClass + ' sev-' + sev;
+      card.className = 'area-card ' + themeClass;
+      var color = HEALTH_COLORS[sev] || '#94a3b8';
+      // tint background and border using HEALTH_COLORS
+      card.style.background = color + '1a';
+      card.style.borderColor = color + '33';
       var h = document.createElement('h2'); h.className = 'area-title'; h.textContent = title;
       var sub = document.createElement('div'); sub.className = 'area-subtitle'; sub.textContent = title + ' Health:';
       var prog = document.createElement('div'); prog.className = 'progress';
