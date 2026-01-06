@@ -7,7 +7,6 @@
     "default_title": "Script Inspector",
     "default_popup": "src/popup.html"
   },
-  "options_page": "src/options.html",
   "background": {
     "service_worker": "src/background.js"
   },
