@@ -23,6 +23,9 @@ body {
 .header-actions {
   display: flex;
   gap: 8px;
+  flex-wrap: nowrap;
+  justify-content: flex-end;
+  align-items: center;
 }
 
 .eyebrow {
@@ -112,6 +115,27 @@ body {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
+}
+
+.scan-btn-large {
+  width: 100%;
+  border: none;
+  background: #111827;
+  color: #fff;
+  padding: 12px 14px;
+  border-radius: 12px;
+  font-weight: 800;
+  font-size: 14px;
+  cursor: pointer;
+  box-shadow: 0 8px 14px rgba(17, 24, 39, 0.2);
+}
+
+.scan-btn-large:active {
+  transform: translateY(1px);
+}
+
+.scan-row {
+  margin: 0 0 12px;
 }
 
 .health-heading {
@@ -230,6 +254,32 @@ body {
   box-shadow: 0 2px 6px rgba(37, 99, 235, 0.12);
 }
 
+.icon-btn {
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  color: #0f172a;
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  font-size: 16px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.12);
+}
+
+.icon-btn:active {
+  transform: translateY(1px);
+}
+
+.icon-btn svg {
+  width: 16px;
+  height: 16px;
+  fill: currentColor;
+}
+
 .toggle-switch {
   position: relative;
   display: inline-block;
@@ -281,6 +331,75 @@ input:checked + .slider:before {
   font-size: 12px;
   color: #475569;
   min-height: 16px;
+}
+
+.view {
+  display: none;
+}
+
+.view.is-active {
+  display: block;
+}
+
+.view-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.view-title {
+  font-size: 16px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.view-sub {
+  font-size: 12px;
+  color: #475569;
+}
+
+.back-btn {
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  color: #0f172a;
+  padding: 6px 10px;
+  border-radius: 10px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.12);
+}
+
+.settings-card {
+  padding: 12px 14px;
+}
+
+.settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.settings-row:last-child {
+  border-bottom: none;
+}
+
+.settings-copy {
+  flex: 1;
+}
+
+.settings-title {
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.settings-desc {
+  font-size: 12px;
+  color: #475569;
+  margin-top: 2px;
 }
 
 .actions {

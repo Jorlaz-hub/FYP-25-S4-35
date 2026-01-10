@@ -8,11 +8,39 @@
 
 function clamp(n, min, max) { return Math.max(min, Math.min(max, n)); }
 function severity(val) { return val < 40 ? 'unsafe' : val <= 75 ? 'poor' : 'passed'; }
+var CHECKS_KEY = 'checksConfig';
+var DEFAULT_CHECKS = {
+  https: true,
+  csp: true,
+  cspQuality: true,
+  hsts: true,
+  xcto: true,
+  referrer: true,
+  permissions: true,
+  thirdParty: true,
+  sri: true,
+  inlineScripts: true,
+  inlineEvents: true,
+  templateMarkers: true,
+  obfuscated: true,
+  unsafeLinks: true,
+  csrf: true,
+  insecureForms: true,
+  tokenHits: true
+};
+
+function normalizeChecks(raw) {
+  var out = {};
+  Object.keys(DEFAULT_CHECKS).forEach(function (key) {
+    out[key] = raw && typeof raw[key] === 'boolean' ? raw[key] : DEFAULT_CHECKS[key];
+  });
+  return out;
+}
 
 // cache recent response headers per tab
 var latestHeadersByTab = {};
 
-function computeAreaScores(info) {
+function computeAreaScores(info, checksRaw) {
   if (!info || !info.scripts) {
     return {
       structure: { score: 0, severity: 'ready' },
@@ -21,6 +49,7 @@ function computeAreaScores(info) {
       overall: { score: 0, severity: 'ready' }
     };
   }
+  var checks = normalizeChecks(checksRaw);
 
   // --- DATA EXTRACTION ---
   var inlineCount = info.inlineScripts != null ? info.inlineScripts : info.scripts.filter(function (s) { return !s.src; }).length;
@@ -52,72 +81,75 @@ function computeAreaScores(info) {
   var templateMarkers = info.templateMarkers || 0;
   var tokenHits = info.tokenHits || 0;
   var formsWithoutCsrf = info.formsWithoutCsrf || 0;
+  var insecureForms = info.insecureForms || 0;
+  var unsafeLinks = info.unsafeLinks || 0;
 
   // --- SCORING LOGIC MODEL ---
 
   // structure score
   var structure = 100;
-  structure -= clamp(inlineCount * 3, 0, 25);
-  structure -= clamp(inlineEvents * 2, 0, 20);
-  structure -= clamp(templateMarkers * 3, 0, 15);
+  if (checks.inlineScripts) structure -= clamp(inlineCount * 3, 0, 25);
+  if (checks.inlineEvents) structure -= clamp(inlineEvents * 2, 0, 20);
+  if (checks.templateMarkers) structure -= clamp(templateMarkers * 3, 0, 15);
   
   // detect and penalize reverse tabnabbing
-  structure -= clamp((info.unsafeLinks || 0) * 2, 0, 10);
+  if (checks.unsafeLinks) structure -= clamp(unsafeLinks * 2, 0, 10);
 
   // security score
   var security = 100;
 
   // 1. Check for CSP presence
-  if (noCsp) {
+  if (checks.csp && noCsp) {
     security -= 15;
-  } 
-  else {
-  // 2. Check for CSP Quality (New Improvement)
-  var cspVal = (hdrs['content-security-policy'] || '').toLowerCase();
+  }
+  else if (checks.cspQuality) {
+    // 2. Check for CSP Quality (New Improvement)
+    var cspVal = (hdrs['content-security-policy'] || '').toLowerCase();
 
-  // Penalize unsafe-inline (very risky)
-  if (cspVal.indexOf("'unsafe-inline'") !== -1) security -= 10;
+    // Penalize unsafe-inline (very risky)
+    if (cspVal.indexOf("'unsafe-inline'") !== -1) security -= 10;
 
-  // Penalize unsafe-eval (risky)
-  if (cspVal.indexOf("'unsafe-eval'") !== -1) security -= 5;
+    // Penalize unsafe-eval (risky)
+    if (cspVal.indexOf("'unsafe-eval'") !== -1) security -= 5;
 
-  // Penalize data: URI usage (evades restrictions)
-  if (cspVal.indexOf("data:") !== -1) security -= 3;
+    // Penalize data: URI usage (evades restrictions)
+    if (cspVal.indexOf("data:") !== -1) security -= 3;
   }
 
-  if (!hdrs['strict-transport-security']) security -= 8;
-  if (!hdrs['x-content-type-options']) security -= 6;
-  if (!hdrs['referrer-policy']) security -= 4;
-  if (!hdrs['permissions-policy']) security -= 4;
-  security -= clamp(noIntegrity * 2, 0, 16);
-  security -= clamp(thirdParty * 2, 0, 16);
-  security -= clamp(inlineCount * 1.5, 0, 15);
+  if (checks.hsts && !hdrs['strict-transport-security']) security -= 8;
+  if (checks.xcto && !hdrs['x-content-type-options']) security -= 6;
+  if (checks.referrer && !hdrs['referrer-policy']) security -= 4;
+  if (checks.permissions && !hdrs['permissions-policy']) security -= 4;
+  if (checks.sri) security -= clamp(noIntegrity * 2, 0, 16);
+  if (checks.thirdParty) security -= clamp(thirdParty * 2, 0, 16);
+  if (checks.inlineScripts) security -= clamp(inlineCount * 1.5, 0, 15);
   try {
-    if (new URL(info.url).protocol !== 'https:') security -= 10;
+    if (checks.https && new URL(info.url).protocol !== 'https:') security -= 10;
   } catch (e) {}
 
 
 
   // for obfuscatedCount
-  var obfuscatedCount = info.scripts.filter(function (s) { 
-    return s.isObfuscated; 
-  }).length;
-
-  if (obfuscatedCount > 0) {
-    security -= (obfuscatedCount * 10);
+  if (checks.obfuscated) {
+    var obfuscatedCount = info.scripts.filter(function (s) {
+      return s.isObfuscated;
+    }).length;
+    if (obfuscatedCount > 0) {
+      security -= (obfuscatedCount * 10);
+    }
   }
 
 
   // exposure score
   var exposure = 100;
-  exposure -= clamp(formsWithoutCsrf * 5, 0, 25);
-  exposure -= clamp(tokenHits * 4, 0, 20);
-  exposure -= clamp(thirdParty * 2, 0, 20);
-  exposure -= clamp(inlineCount * 1, 0, 10);
+  if (checks.csrf) exposure -= clamp(formsWithoutCsrf * 5, 0, 25);
+  if (checks.tokenHits) exposure -= clamp(tokenHits * 4, 0, 20);
+  if (checks.thirdParty) exposure -= clamp(thirdParty * 2, 0, 20);
+  if (checks.inlineScripts) exposure -= clamp(inlineCount * 1, 0, 10);
   
   // detect and penalize insecure forms
   // forms using GET (for passwords) or external links present risks of data leakage
-  exposure -= clamp((info.insecureForms || 0) * 10, 0, 20);
+  if (checks.insecureForms) exposure -= clamp(insecureForms * 10, 0, 20);
 
   // --- CALC FINAL TOTAL ---
   structure = clamp(structure, 0, 100);
@@ -145,10 +177,11 @@ chrome.runtime.onMessage.addListener(function (message, sender) {
     var headerCache = tabId != null ? latestHeadersByTab[tabId] : null;
     message.responseHeaders = headerCache ? headerCache.headers : {};
 
-    chrome.storage.local.get(['scanEnabled', key], function (data) {
+    chrome.storage.local.get(['scanEnabled', CHECKS_KEY, key], function (data) {
       if (data.scanEnabled === false) return;
       var list = data[key] || [];
-      var entry = { ts: Date.now(), result: message, areas: computeAreaScores(message) };
+      var checks = normalizeChecks(data[CHECKS_KEY]);
+      var entry = { ts: Date.now(), result: message, areas: computeAreaScores(message, checks), checks: checks };
       list.unshift(entry);
       if (list.length > HISTORY_LIMIT) list = list.slice(0, HISTORY_LIMIT);
       var obj = {}; obj[key] = list;

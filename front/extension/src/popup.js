@@ -1,4 +1,24 @@
 var ENABLED_KEY = 'scanEnabled';
+var CHECKS_KEY = 'checksConfig';
+var DEFAULT_CHECKS = {
+  https: true,
+  csp: true,
+  cspQuality: true,
+  hsts: true,
+  xcto: true,
+  referrer: true,
+  permissions: true,
+  thirdParty: true,
+  sri: true,
+  inlineScripts: true,
+  inlineEvents: true,
+  templateMarkers: true,
+  obfuscated: true,
+  unsafeLinks: true,
+  csrf: true,
+  insecureForms: true,
+  tokenHits: true
+};
 var HEALTH_COLORS = {
   unsafe: '#ef4444',
   poor: '#f59e0b',
@@ -32,6 +52,89 @@ function formatRow(label, value) {
 function setStatus(message) {
   var el = document.getElementById('status');
   if (el) el.textContent = message || '';
+}
+
+function normalizeChecks(raw) {
+  var out = {};
+  Object.keys(DEFAULT_CHECKS).forEach(function (key) {
+    out[key] = raw && typeof raw[key] === 'boolean' ? raw[key] : DEFAULT_CHECKS[key];
+  });
+  return out;
+}
+
+var checksConfig = normalizeChecks(null);
+
+function saveChecks(next, callback) {
+  var obj = {}; obj[CHECKS_KEY] = next;
+  chrome.storage.local.set(obj, function () {
+    if (callback) callback();
+  });
+}
+
+function updateMasterToggle(checks) {
+  var master = document.getElementById('checksAll');
+  if (!master) return;
+  var values = Object.keys(DEFAULT_CHECKS).map(function (key) { return checks[key]; });
+  var allOn = values.every(function (v) { return v; });
+  var allOff = values.every(function (v) { return !v; });
+  master.checked = allOn;
+  master.indeterminate = !allOn && !allOff;
+}
+
+function applyChecksToUI(checks) {
+  var inputs = document.querySelectorAll('[data-check]');
+  inputs.forEach(function (input) {
+    var key = input.getAttribute('data-check');
+    if (!key) return;
+    input.checked = !!checks[key];
+  });
+  updateMasterToggle(checks);
+}
+
+function bindCheckToggles() {
+  var master = document.getElementById('checksAll');
+  if (master) {
+    master.addEventListener('change', function (e) {
+      var enabled = !!e.target.checked;
+      var next = {};
+      Object.keys(DEFAULT_CHECKS).forEach(function (key) {
+        next[key] = enabled;
+      });
+      checksConfig = next;
+      applyChecksToUI(checksConfig);
+      saveChecks(checksConfig, function () {
+        setStatus(enabled ? 'All checks enabled.' : 'All checks disabled.');
+        loadResults();
+      });
+    });
+  }
+
+  var inputs = document.querySelectorAll('[data-check]');
+  inputs.forEach(function (input) {
+    input.addEventListener('change', function () {
+      var key = input.getAttribute('data-check');
+      var next = normalizeChecks(checksConfig);
+      next[key] = !!input.checked;
+      checksConfig = next;
+      updateMasterToggle(checksConfig);
+      saveChecks(checksConfig, function () {
+        setStatus('Checks updated.');
+        loadResults();
+      });
+    });
+  });
+}
+
+function showView(viewName) {
+  var views = {
+    main: document.getElementById('mainView'),
+    settings: document.getElementById('settingsView'),
+    more: document.getElementById('moreView')
+  };
+  Object.keys(views).forEach(function (key) {
+    if (!views[key]) return;
+    views[key].classList.toggle('is-active', key === viewName);
+  });
 }
 
 function setHealthDisplay(scoreText, severity, caption, angleDeg) {
@@ -85,7 +188,7 @@ function setPreviousHealthRing(score, severity, caption, angleDeg) {
 }
 
 function computeHealth(info) {
-  var scores = computeAreaScores(info);
+  var scores = computeAreaScores(info, checksConfig);
   return scores.overall;
 }
 
@@ -101,7 +204,7 @@ function clamp(n, min, max) {
   return Math.max(min, Math.min(max, n));
 }
 
-function computeAreaScores(info) {
+function computeAreaScores(info, checksRaw) {
   if (!info || !info.scripts) {
     return {
       structure: { score: 0, severity: 'ready' },
@@ -111,6 +214,7 @@ function computeAreaScores(info) {
     };
   }
 
+  var checks = normalizeChecks(checksRaw);
   var inlineCount = info.inlineScripts != null ? info.inlineScripts : info.scripts.filter(function (s) { return !s.src; }).length;
   var thirdParty = info.thirdPartyScripts != null ? info.thirdPartyScripts : 0;
   if (thirdParty === 0) {
@@ -137,30 +241,49 @@ function computeAreaScores(info) {
   var templateMarkers = info.templateMarkers || 0;
   var tokenHits = info.tokenHits || 0;
   var formsWithoutCsrf = info.formsWithoutCsrf || 0;
+  var insecureForms = info.insecureForms || 0;
+  var unsafeLinks = info.unsafeLinks || 0;
 
   var structure = 100;
-  structure -= clamp(inlineCount * 3, 0, 25);
-  structure -= clamp(inlineEvents * 2, 0, 20);
-  structure -= clamp(templateMarkers * 3, 0, 15);
+  if (checks.inlineScripts) structure -= clamp(inlineCount * 3, 0, 25);
+  if (checks.inlineEvents) structure -= clamp(inlineEvents * 2, 0, 20);
+  if (checks.templateMarkers) structure -= clamp(templateMarkers * 3, 0, 15);
+  if (checks.unsafeLinks) structure -= clamp(unsafeLinks * 2, 0, 10);
 
   var security = 100;
-  if (noCsp) security -= 15;
-  if (!hdrs['strict-transport-security']) security -= 8;
-  if (!hdrs['x-content-type-options']) security -= 6;
-  if (!hdrs['referrer-policy']) security -= 4;
-  if (!hdrs['permissions-policy']) security -= 4;
-  security -= clamp(noIntegrity * 2, 0, 16);
-  security -= clamp(thirdParty * 2, 0, 16);
-  security -= clamp(inlineCount * 1.5, 0, 15);
+  if (checks.csp && noCsp) security -= 15;
+  else if (checks.cspQuality) {
+    var cspVal = (hdrs['content-security-policy'] || '').toLowerCase();
+    if (cspVal.indexOf("'unsafe-inline'") !== -1) security -= 10;
+    if (cspVal.indexOf("'unsafe-eval'") !== -1) security -= 5;
+    if (cspVal.indexOf("data:") !== -1) security -= 3;
+  }
+  if (checks.hsts && !hdrs['strict-transport-security']) security -= 8;
+  if (checks.xcto && !hdrs['x-content-type-options']) security -= 6;
+  if (checks.referrer && !hdrs['referrer-policy']) security -= 4;
+  if (checks.permissions && !hdrs['permissions-policy']) security -= 4;
+  if (checks.sri) security -= clamp(noIntegrity * 2, 0, 16);
+  if (checks.thirdParty) security -= clamp(thirdParty * 2, 0, 16);
+  if (checks.inlineScripts) security -= clamp(inlineCount * 1.5, 0, 15);
   try {
-    if (new URL(info.url).protocol !== 'https:') security -= 10;
+    if (checks.https && new URL(info.url).protocol !== 'https:') security -= 10;
   } catch (e) {}
 
+  if (checks.obfuscated) {
+    var obfuscatedCount = info.scripts.filter(function (s) {
+      return s.isObfuscated;
+    }).length;
+    if (obfuscatedCount > 0) {
+      security -= (obfuscatedCount * 10);
+    }
+  }
+
   var exposure = 100;
-  exposure -= clamp(formsWithoutCsrf * 5, 0, 25);
-  exposure -= clamp(tokenHits * 4, 0, 20);
-  exposure -= clamp(thirdParty * 2, 0, 20);
-  exposure -= clamp(inlineCount * 1, 0, 10);
+  if (checks.csrf) exposure -= clamp(formsWithoutCsrf * 5, 0, 25);
+  if (checks.tokenHits) exposure -= clamp(tokenHits * 4, 0, 20);
+  if (checks.thirdParty) exposure -= clamp(thirdParty * 2, 0, 20);
+  if (checks.inlineScripts) exposure -= clamp(inlineCount * 1, 0, 10);
+  if (checks.insecureForms) exposure -= clamp(insecureForms * 10, 0, 20);
 
   structure = clamp(structure, 0, 100);
   security = clamp(security, 0, 100);
@@ -217,6 +340,17 @@ function loadToggle(callback) {
   });
 }
 
+function loadChecks(callback) {
+  chrome.storage.local.get([CHECKS_KEY], function (data) {
+    checksConfig = normalizeChecks(data[CHECKS_KEY]);
+    applyChecksToUI(checksConfig);
+    if (!data[CHECKS_KEY]) {
+      saveChecks(checksConfig);
+    }
+    if (callback) callback(checksConfig);
+  });
+}
+
 function withActiveTab(fn) {
   chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
     var tab = tabs && tabs[0];
@@ -249,7 +383,7 @@ function render(results) {
   // Use latest scan (list is unshifted in background)
   latestEntry = results[0];
   var latest = latestEntry.result;
-  latestAreas = latestEntry.areas || computeAreaScores(latest);
+  latestAreas = computeAreaScores(latest, checksConfig);
   latestHealth = latestAreas.overall;
   var angle = (latestHealth.score / 100) * 360;
   var caption = latestHealth.severity === 'passed' ? 'Secure posture' : latestHealth.severity === 'poor' ? 'Issues detected' : 'Unsafe';
@@ -257,7 +391,7 @@ function render(results) {
 
   if (results.length >= 2) {
     previousEntry = results[1];
-    previousAreas = previousEntry.areas || computeAreaScores(previousEntry.result);
+    previousAreas = computeAreaScores(previousEntry.result, checksConfig);
     previousHealth = previousAreas.overall;
 
     // Only show previous if score is different
@@ -274,7 +408,7 @@ function render(results) {
 
   const meter = document.querySelector('.health-meter');
   const visibleRings = [...meter.querySelectorAll('.ring')].filter(r => r.offsetParent !== null);
-  meter.style.justifyContent = visibleRings.length === 1 ? 'center' : 'space-between';
+  meter.style.justifyContent = visibleRings.length > 1 ? 'space-between' : 'center';
 
   results.slice(0, 10).forEach(function (r) {
     var w = document.createElement('div');
@@ -366,7 +500,7 @@ function handleDownload() {
     url: latestEntry.result.url,
     scannedAt: latestEntry.ts ? new Date(latestEntry.ts).toISOString() : null,
     health: latestHealth,
-    areas: latestAreas || (latestEntry.result ? computeAreaScores(latestEntry.result) : null),
+    areas: latestAreas || (latestEntry.result ? computeAreaScores(latestEntry.result, checksConfig) : null),
     scripts: latestEntry.result.scripts,
     cspMeta: latestEntry.result.cspMeta,
     responseHeaders: latestEntry.result.responseHeaders || {}
@@ -386,9 +520,7 @@ function handleDownload() {
 }
 
 function handleMore() {
-  chrome.tabs.create({
-    url: chrome.runtime.getURL('src/more.html')
-  });
+  showView('more');
 }
 
 document.addEventListener('DOMContentLoaded', function () {
@@ -425,11 +557,36 @@ document.addEventListener('DOMContentLoaded', function () {
     downloadBtn.addEventListener('click', handleDownload);
   }
 
-  var moreBtn = document.getElementById('moreBtn');
+  var settingsBtn = document.getElementById('settingsBtn');
+  if (settingsBtn) {
+    settingsBtn.addEventListener('click', function () {
+      showView('settings');
+      loadChecks();
+    });
+  }
+
+  var settingsBack = document.getElementById('settingsBack');
+  if (settingsBack) {
+    settingsBack.addEventListener('click', function () {
+      showView('main');
+    });
+  }
+
+  var moreBtn = document.getElementById('morePanelBtn');
   if (moreBtn) {
     moreBtn.addEventListener('click', handleMore);
   }
 
+  var moreBack = document.getElementById('moreBack');
+  if (moreBack) {
+    moreBack.addEventListener('click', function () {
+      showView('main');
+    });
+  }
+
+  bindCheckToggles();
   loadToggle();
-  loadResults();
+  loadChecks(function () {
+    loadResults();
+  });
 });

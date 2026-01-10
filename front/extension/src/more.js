@@ -1,4 +1,34 @@
 var ENABLED_KEY = 'scanEnabled';
+var CHECKS_KEY = 'checksConfig';
+var DEFAULT_CHECKS = {
+  https: true,
+  csp: true,
+  cspQuality: true,
+  hsts: true,
+  xcto: true,
+  referrer: true,
+  permissions: true,
+  thirdParty: true,
+  sri: true,
+  inlineScripts: true,
+  inlineEvents: true,
+  templateMarkers: true,
+  obfuscated: true,
+  unsafeLinks: true,
+  csrf: true,
+  insecureForms: true,
+  tokenHits: true
+};
+
+var checksConfig = normalizeChecks(null);
+
+function normalizeChecks(raw) {
+  var out = {};
+  Object.keys(DEFAULT_CHECKS).forEach(function (key) {
+    out[key] = raw && typeof raw[key] === 'boolean' ? raw[key] : DEFAULT_CHECKS[key];
+  });
+  return out;
+}
 
 function setStatus(msg) {
   var el = document.getElementById('status');
@@ -31,14 +61,87 @@ function bindSettings() {
     clearBtn.addEventListener('click', function () {
       chrome.storage.local.clear(function () {
         setStatus('All stored results cleared.');
+        loadToggle();
+        loadChecks();
       });
     });
   }
 }
 
+function saveChecks(next, callback) {
+  var obj = {}; obj[CHECKS_KEY] = next;
+  chrome.storage.local.set(obj, function () {
+    if (callback) callback();
+  });
+}
+
+function updateMasterToggle(checks) {
+  var master = document.getElementById('checksAll');
+  if (!master) return;
+  var values = Object.keys(DEFAULT_CHECKS).map(function (key) { return checks[key]; });
+  var allOn = values.every(function (v) { return v; });
+  var allOff = values.every(function (v) { return !v; });
+  master.checked = allOn;
+  master.indeterminate = !allOn && !allOff;
+}
+
+function applyChecksToUI(checks) {
+  var inputs = document.querySelectorAll('[data-check]');
+  inputs.forEach(function (input) {
+    var key = input.getAttribute('data-check');
+    if (!key) return;
+    input.checked = !!checks[key];
+  });
+  updateMasterToggle(checks);
+}
+
+function loadChecks() {
+  chrome.storage.local.get([CHECKS_KEY], function (data) {
+    checksConfig = normalizeChecks(data[CHECKS_KEY]);
+    applyChecksToUI(checksConfig);
+    if (!data[CHECKS_KEY]) {
+      saveChecks(checksConfig);
+    }
+  });
+}
+
+function bindCheckToggles() {
+  var master = document.getElementById('checksAll');
+  if (master) {
+    master.addEventListener('change', function (e) {
+      var enabled = !!e.target.checked;
+      var next = {};
+      Object.keys(DEFAULT_CHECKS).forEach(function (key) {
+        next[key] = enabled;
+      });
+      checksConfig = next;
+      applyChecksToUI(checksConfig);
+      saveChecks(checksConfig, function () {
+        setStatus(enabled ? 'All checks enabled.' : 'All checks disabled.');
+      });
+    });
+  }
+
+  var inputs = document.querySelectorAll('[data-check]');
+  inputs.forEach(function (input) {
+    input.addEventListener('change', function () {
+      var key = input.getAttribute('data-check');
+      var next = normalizeChecks(checksConfig);
+      next[key] = !!input.checked;
+      checksConfig = next;
+      updateMasterToggle(checksConfig);
+      saveChecks(checksConfig, function () {
+        setStatus('Checks updated.');
+      });
+    });
+  });
+}
+
 document.addEventListener('DOMContentLoaded', function () {
   loadToggle();
   bindSettings();
+  loadChecks();
+  bindCheckToggles();
 
   var repoBtn = document.getElementById('repoBtn');
   if (repoBtn) {
