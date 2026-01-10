@@ -307,6 +307,24 @@
             </div>
             <button id="downloadBtn" type="button" class="dark-btn secondary">Download</button>
           </div>
+          <div class="settings-row">
+            <div class="settings-copy">
+              <div class="settings-title">Clear stored results</div>
+              <div class="settings-desc">Removes all cached scan data from this extension.</div>
+            </div>
+            <button id="clearStorageBtn" type="button" class="dark-btn secondary">Clear</button>
+          </div>
+        </div>
+
+        <div class="card settings-card">
+          <div class="settings-row">
+            <div class="settings-copy">
+              <div class="settings-title">History</div>
+              <div class="settings-desc">Load stored scan history for this browser.</div>
+            </div>
+            <button id="historyBtn" type="button" class="dark-btn secondary">View</button>
+          </div>
+          <div id="historyContainer" class="history-container is-hidden" data-visible="false">No history loaded yet.</div>
         </div>
       </section>
     </main>
