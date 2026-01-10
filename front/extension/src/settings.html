@@ -1,0 +1,239 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Script Inspector Settings</title>
+    <link rel="stylesheet" href="./more.css" />
+  </head>
+  <body>
+    <div class="page">
+      <h1>Settings</h1>
+      <p class="subhead">Manage scanning, storage, and checks.</p>
+
+      <div class="card">
+        <h2>Scanning</h2>
+        <div class="row">
+          <div class="copy">
+            <div class="title">Enable scanning</div>
+            <div class="desc">Allow the extension to scan pages and record results.</div>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" id="scanToggle" />
+            <span class="slider"></span>
+          </label>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Storage</h2>
+        <div class="row">
+          <div class="copy">
+            <div class="title">Clear stored results</div>
+            <div class="desc">Removes all cached scan data from this extension.</div>
+          </div>
+          <button id="clear" type="button">Clear all</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Checks</h2>
+        <div class="row">
+          <div class="copy">
+            <div class="title">Enable all checks</div>
+            <div class="desc">Toggle every indicator on or off.</div>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" id="checksAll" />
+            <span class="slider"></span>
+          </label>
+        </div>
+        <div class="row">
+          <div class="copy">
+            <div class="title">HTTPS only</div>
+            <div class="desc">Penalize pages served without HTTPS.</div>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" data-check="https" />
+            <span class="slider"></span>
+          </label>
+        </div>
+        <div class="row">
+          <div class="copy">
+            <div class="title">CSP header</div>
+            <div class="desc">Require a Content-Security-Policy header.</div>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" data-check="csp" />
+            <span class="slider"></span>
+          </label>
+        </div>
+        <div class="row">
+          <div class="copy">
+            <div class="title">CSP quality</div>
+            <div class="desc">Flag unsafe-inline/unsafe-eval/data in CSP.</div>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" data-check="cspQuality" />
+            <span class="slider"></span>
+          </label>
+        </div>
+        <div class="row">
+          <div class="copy">
+            <div class="title">HSTS header</div>
+            <div class="desc">Check Strict-Transport-Security.</div>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" data-check="hsts" />
+            <span class="slider"></span>
+          </label>
+        </div>
+        <div class="row">
+          <div class="copy">
+            <div class="title">X-Content-Type-Options</div>
+            <div class="desc">Check MIME sniffing protection.</div>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" data-check="xcto" />
+            <span class="slider"></span>
+          </label>
+        </div>
+        <div class="row">
+          <div class="copy">
+            <div class="title">Referrer-Policy</div>
+            <div class="desc">Check referrer leakage controls.</div>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" data-check="referrer" />
+            <span class="slider"></span>
+          </label>
+        </div>
+        <div class="row">
+          <div class="copy">
+            <div class="title">Permissions-Policy</div>
+            <div class="desc">Check powerful feature restrictions.</div>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" data-check="permissions" />
+            <span class="slider"></span>
+          </label>
+        </div>
+        <div class="row">
+          <div class="copy">
+            <div class="title">Third-party scripts</div>
+            <div class="desc">Penalize scripts loaded from other origins.</div>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" data-check="thirdParty" />
+            <span class="slider"></span>
+          </label>
+        </div>
+        <div class="row">
+          <div class="copy">
+            <div class="title">SRI on external scripts</div>
+            <div class="desc">Require integrity hashes on external scripts.</div>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" data-check="sri" />
+            <span class="slider"></span>
+          </label>
+        </div>
+        <div class="row">
+          <div class="copy">
+            <div class="title">Inline scripts</div>
+            <div class="desc">Penalize inline &lt;script&gt; blocks.</div>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" data-check="inlineScripts" />
+            <span class="slider"></span>
+          </label>
+        </div>
+        <div class="row">
+          <div class="copy">
+            <div class="title">Inline event handlers</div>
+            <div class="desc">Detect onclick/onload attributes.</div>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" data-check="inlineEvents" />
+            <span class="slider"></span>
+          </label>
+        </div>
+        <div class="row">
+          <div class="copy">
+            <div class="title">Template markers</div>
+            <div class="desc">Detect {{ }} or &lt;% %&gt; markers.</div>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" data-check="templateMarkers" />
+            <span class="slider"></span>
+          </label>
+        </div>
+        <div class="row">
+          <div class="copy">
+            <div class="title">Obfuscated scripts</div>
+            <div class="desc">Detect packed or high-entropy inline code.</div>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" data-check="obfuscated" />
+            <span class="slider"></span>
+          </label>
+        </div>
+        <div class="row">
+          <div class="copy">
+            <div class="title">Reverse tabnabbing</div>
+            <div class="desc">Check target=_blank links without noopener.</div>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" data-check="unsafeLinks" />
+            <span class="slider"></span>
+          </label>
+        </div>
+        <div class="row">
+          <div class="copy">
+            <div class="title">CSRF tokens</div>
+            <div class="desc">Check forms for CSRF/XSRF tokens.</div>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" data-check="csrf" />
+            <span class="slider"></span>
+          </label>
+        </div>
+        <div class="row">
+          <div class="copy">
+            <div class="title">Insecure forms</div>
+            <div class="desc">Detect GET-password forms or external actions.</div>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" data-check="insecureForms" />
+            <span class="slider"></span>
+          </label>
+        </div>
+        <div class="row">
+          <div class="copy">
+            <div class="title">Token/secret patterns</div>
+            <div class="desc">Detect potential tokens in inline code.</div>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" data-check="tokenHits" />
+            <span class="slider"></span>
+          </label>
+        </div>
+      </div>
+
+      <div id="status"></div>
+    </div>
+
+    <div id="confirmOverlay" class="modal-overlay" aria-hidden="true">
+      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
+        <h3 id="confirmTitle">Clear stored results?</h3>
+        <p>This will remove all cached scan data from the extension.</p>
+        <div class="modal-actions">
+          <button id="confirmCancel" type="button" class="modal-btn secondary">Cancel</button>
+          <button id="confirmClear" type="button" class="modal-btn danger">Clear all</button>
+        </div>
+      </div>
+    </div>
+
+    <script src="./settings.js"></script>
+  </body>
+</html>

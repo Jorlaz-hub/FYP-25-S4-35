@@ -557,6 +557,20 @@ document.addEventListener('DOMContentLoaded', function () {
     downloadBtn.addEventListener('click', handleDownload);
   }
 
+  var openMorePageBtn = document.getElementById('openMorePageBtn');
+  if (openMorePageBtn) {
+    openMorePageBtn.addEventListener('click', function () {
+      chrome.tabs.create({ url: chrome.runtime.getURL('src/more.html') });
+    });
+  }
+
+  var openSettingsPageBtn = document.getElementById('openSettingsPageBtn');
+  if (openSettingsPageBtn) {
+    openSettingsPageBtn.addEventListener('click', function () {
+      chrome.tabs.create({ url: chrome.runtime.getURL('src/settings.html') });
+    });
+  }
+
   var settingsBtn = document.getElementById('settingsBtn');
   if (settingsBtn) {
     settingsBtn.addEventListener('click', function () {

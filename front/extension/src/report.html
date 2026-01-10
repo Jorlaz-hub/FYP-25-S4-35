@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Scan Report</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="./report.css" />
+</head>
+<body>
+  <header class="report-header">
+    <div>
+      <h1>Scan Report</h1>
+      <p id="reportSubtitle" class="subtitle">Loading...</p>
+    </div>
+    <button id="downloadReportBtn" class="download-btn">Download</button>
+  </header>
+
+  <main class="report-body" id="reportBody">
+    <section class="card">
+      <h2>Summary</h2>
+      <div class="summary-grid" id="summaryGrid"></div>
+    </section>
+
+    <section class="card">
+      <h2>Score Breakdown</h2>
+      <table class="score-table" id="scoreTable"></table>
+    </section>
+
+    <section class="card">
+      <h2>Key Metrics</h2>
+      <ul class="metric-list" id="metricList"></ul>
+    </section>
+
+    <section class="card">
+      <h2>Headers & CSP</h2>
+      <ul class="metric-list" id="headerList"></ul>
+    </section>
+  </main>
+
+  <script src="./report.js"></script>
+</body>
+</html>
