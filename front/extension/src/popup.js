@@ -523,6 +523,76 @@ function handleMore() {
   showView('more');
 }
 
+function setHistoryVisibility(container, visible) {
+  if (!container) return;
+  container.dataset.visible = visible ? 'true' : 'false';
+  container.classList.toggle('is-hidden', !visible);
+}
+
+function handleHistory() {
+  var container = document.getElementById('historyContainer');
+  var historyBtn = document.getElementById('historyBtn');
+  if (!container || !historyBtn) return;
+
+  var isVisible = container.dataset.visible === 'true';
+  if (isVisible) {
+    setHistoryVisibility(container, false);
+    historyBtn.textContent = 'View';
+    return;
+  }
+
+  setHistoryVisibility(container, true);
+  historyBtn.textContent = 'Hide';
+  container.textContent = 'Loading history...';
+
+  chrome.storage.local.get(null, function (data) {
+    container.innerHTML = '';
+    var scanKeys = Object.keys(data).filter(function (k) { return k.indexOf('scan:') === 0; });
+    if (scanKeys.length === 0) {
+      container.textContent = 'No scan history available.';
+      return;
+    }
+
+    scanKeys.forEach(function (key) {
+      var historyList = data[key];
+      var url = key.replace('scan:', '');
+
+      var title = document.createElement('h3');
+      title.textContent = url;
+      container.appendChild(title);
+
+      var ul = document.createElement('ul');
+      historyList.forEach(function (entry) {
+        var li = document.createElement('li');
+        var date = entry.ts ? new Date(entry.ts).toLocaleString() : 'Unknown';
+        var score = entry.areas && entry.areas.overall ? entry.areas.overall.score : '--';
+        var severity = entry.areas && entry.areas.overall ? entry.areas.overall.severity : '--';
+        li.textContent = date + ' - Score: ' + score + ' (' + severity + ')';
+        ul.appendChild(li);
+      });
+
+      container.appendChild(ul);
+    });
+  });
+}
+
+function handleClearStorage() {
+  chrome.storage.local.clear(function () {
+    setStatus('All stored results cleared.');
+    loadToggle();
+    loadChecks(function () {
+      loadResults();
+    });
+    var container = document.getElementById('historyContainer');
+    if (container) {
+      setHistoryVisibility(container, false);
+      container.textContent = 'No history loaded yet.';
+    }
+    var historyBtn = document.getElementById('historyBtn');
+    if (historyBtn) historyBtn.textContent = 'View';
+  });
+}
+
 document.addEventListener('DOMContentLoaded', function () {
   var toggle = document.getElementById('scanToggle');
   if (toggle) {

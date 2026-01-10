@@ -402,6 +402,38 @@ input:checked + .slider:before {
   margin-top: 2px;
 }
 
+.history-container {
+  margin-top: 8px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 12px;
+  max-height: 220px;
+  overflow-y: auto;
+  font-size: 13px;
+  color: #0f172a;
+}
+
+.history-container h3 {
+  margin: 0 0 6px;
+  font-size: 13px;
+  color: #0f172a;
+}
+
+.history-container ul {
+  margin: 0 0 10px 18px;
+  padding: 0;
+}
+
+.history-container li {
+  margin-bottom: 4px;
+  color: #334155;
+}
+
+.history-container.is-hidden {
+  display: none;
+}
+
 .actions {
   display: flex;
   flex-direction: column;
