@@ -1,34 +1,9 @@
 var ENABLED_KEY = 'scanEnabled';
 var CHECKS_KEY = 'checksConfig';
-var DEFAULT_CHECKS = {
-  https: true,
-  csp: true,
-  cspQuality: true,
-  hsts: true,
-  xcto: true,
-  referrer: true,
-  permissions: true,
-  thirdParty: true,
-  sri: true,
-  inlineScripts: true,
-  inlineEvents: true,
-  templateMarkers: true,
-  obfuscated: true,
-  unsafeLinks: true,
-  csrf: true,
-  insecureForms: true,
-  tokenHits: true
-};
+var DEFAULT_CHECKS = SharedAlgo.DEFAULT_CHECKS;
+var normalizeChecks = SharedAlgo.normalizeChecks;
 
 var checksConfig = normalizeChecks(null);
-
-function normalizeChecks(raw) {
-  var out = {};
-  Object.keys(DEFAULT_CHECKS).forEach(function (key) {
-    out[key] = raw && typeof raw[key] === 'boolean' ? raw[key] : DEFAULT_CHECKS[key];
-  });
-  return out;
-}
 
 function setStatus(msg) {
   var el = document.getElementById('status');

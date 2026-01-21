@@ -20,33 +20,8 @@
   function runScan() {
     
     // --- SCAN SCRIPT TAGS ---
-    // convert live HTMLcollection (document.scripts) to standard array
-    var scripts = Array.prototype.slice.call(document.scripts).map(function (s) {
-      return {
-        // source URL (external), null (inline)
-        src: s.src || null,
-        
-        // measure length of inline script
-        // larger blocks increase risk of malicious code
-        inlineLength: s.src ? 0 : (s.textContent || '').length,
-        
-        // capture type (e.g., 'module' or 'text/javascript')
-        type: s.type || 'text/javascript',
-        
-        // check for 'nonce' (for Content Security Policy bypass prevention)
-        hasNonce: !!s.nonce,
-        
-        // check for Subresource Integrity (SRI) hash
-        // used for 3rd party scripts
-        integrity: s.integrity || null,
-        
-        // extract text sample for secret testing
-        textSample: s.src ? '' : (s.textContent || '').slice(0, 2000)
-      };
-    });
-
-  function detectObfuscation(text) {
-    if (!text || text.length < 60) return false;
+    function detectObfuscation(text) {
+      if (!text || text.length < 60) return false;
 
       // Heuristic: Search for a continuous block of 60+ alphanumeric characters.
       var highEntropyPattern = /[A-Za-z0-9+/=]{40,}/;
@@ -70,8 +45,6 @@
         textSample: s.src ? '' : content.slice(0, 2000)
       };
     });
-
-  
 
     // calculate high-level stats for the report
     var inlineScripts = scripts.filter(function (s) { return !s.src; }).length;
