@@ -104,17 +104,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function renderMetrics(list, result) {
     list.innerHTML = '';
+    const inlineScriptsUnsafe = result.inlineScriptsUnsafe ?? '--';
+    const thirdPartyUnsafe = result.thirdPartyScriptsUnsafe ?? result.thirdPartyScripts ?? '--';
+    const tokenHitsUnsafe = result.tokenHitsUnsafe ?? result.tokenHits ?? '--';
+    const templateMarkersUnsafe = result.templateMarkersUnsafe ?? result.templateMarkers ?? '--';
+    const formsWithoutCsrfUnsafe = result.formsWithoutCsrfUnsafe ?? result.formsWithoutCsrf ?? '--';
     const metrics = [
-      ['Inline scripts', result.inlineScripts],
-      ['External scripts', result.externalScripts],
-      ['Third-party scripts', result.thirdPartyScripts],
-      ['Inline event handlers', result.inlineEventHandlers],
-      ['Template markers', result.templateMarkers],
-      ['Token hits', result.tokenHits],
-      ['Forms detected', result.formsTotal],
-      ['Forms without CSRF', result.formsWithoutCsrf],
-      ['Insecure forms', result.insecureForms],
-      ['Unsafe links', result.unsafeLinks]
+      ['Inline scripts without safety tags', inlineScriptsUnsafe],
+      ['External scripts without safety checks', thirdPartyUnsafe],
+      ['Clickable elements with inline actions', result.inlineEventHandlers],
+      ['Template markers in unsafe scripts', templateMarkersUnsafe],
+      ['Token-like strings in unsafe scripts', tokenHitsUnsafe],
+      ['Forms missing anti-forgery protection', formsWithoutCsrfUnsafe],
+      ['Forms that expose passwords or send data off-site', result.insecureForms],
+      ['Links that open a new tab without protection', result.unsafeLinks]
     ];
 
     metrics.forEach(([label, value]) => {
@@ -172,37 +175,35 @@ document.addEventListener('DOMContentLoaded', () => {
     const scanTime = entry.ts ? new Date(entry.ts).toLocaleString() : 'Unknown';
 
     const lines = [];
-    lines.push('Scan Report');
+    lines.push('Website Safety Report');
     lines.push('-----------');
-    lines.push(`Site: ${site || 'Unknown'}`);
-    lines.push(`URL: ${result.url || site || 'Unknown'}`);
-    lines.push(`Scan Time: ${scanTime}`);
+    lines.push(`Website: ${site || 'Unknown'}`);
+    lines.push(`Page: ${result.url || site || 'Unknown'}`);
+    lines.push(`Checked on: ${scanTime}`);
     lines.push('');
-    lines.push('Score Breakdown');
-    lines.push(`Structure: ${areas.structure?.score ?? '--'} (${areas.structure?.severity ?? '--'})`);
-    lines.push(`Security: ${areas.security?.score ?? '--'} (${areas.security?.severity ?? '--'})`);
-    lines.push(`Exposure: ${areas.exposure?.score ?? '--'} (${areas.exposure?.severity ?? '--'})`);
-    lines.push(`Overall: ${areas.overall?.score ?? '--'} (${areas.overall?.severity ?? '--'})`);
+    lines.push('Overall Results (plain English)');
+    lines.push(`Total score: ${areas.overall?.score ?? '--'} (${areas.overall?.severity ?? '--'})`);
+    lines.push(`Structure score: ${areas.structure?.score ?? '--'} (${areas.structure?.severity ?? '--'})`);
+    lines.push(`Security score: ${areas.security?.score ?? '--'} (${areas.security?.severity ?? '--'})`);
+    lines.push(`Exposure score: ${areas.exposure?.score ?? '--'} (${areas.exposure?.severity ?? '--'})`);
     lines.push('');
-    lines.push('Key Metrics');
-    lines.push(`Inline scripts: ${result.inlineScripts ?? '--'}`);
-    lines.push(`External scripts: ${result.externalScripts ?? '--'}`);
-    lines.push(`Third-party scripts: ${result.thirdPartyScripts ?? '--'}`);
-    lines.push(`Inline event handlers: ${result.inlineEventHandlers ?? '--'}`);
-    lines.push(`Template markers: ${result.templateMarkers ?? '--'}`);
-    lines.push(`Token hits: ${result.tokenHits ?? '--'}`);
-    lines.push(`Forms detected: ${result.formsTotal ?? '--'}`);
-    lines.push(`Forms without CSRF: ${result.formsWithoutCsrf ?? '--'}`);
-    lines.push(`Insecure forms: ${result.insecureForms ?? '--'}`);
-    lines.push(`Unsafe links: ${result.unsafeLinks ?? '--'}`);
+    lines.push('Key Findings (only unsafe items)');
+    lines.push(`Inline scripts without safety tags: ${result.inlineScriptsUnsafe ?? '--'}`);
+    lines.push(`External scripts without safety checks: ${result.thirdPartyScriptsUnsafe ?? result.thirdPartyScripts ?? '--'}`);
+    lines.push(`Clickable elements with inline actions: ${result.inlineEventHandlers ?? '--'}`);
+    lines.push(`Template markers in unsafe scripts: ${result.templateMarkersUnsafe ?? result.templateMarkers ?? '--'}`);
+    lines.push(`Token-like strings in unsafe scripts: ${result.tokenHitsUnsafe ?? result.tokenHits ?? '--'}`);
+    lines.push(`Forms missing anti-forgery protection: ${result.formsWithoutCsrfUnsafe ?? result.formsWithoutCsrf ?? '--'}`);
+    lines.push(`Forms that expose passwords or send data off-site: ${result.insecureForms ?? '--'}`);
+    lines.push(`Links that open a new tab without protection: ${result.unsafeLinks ?? '--'}`);
     lines.push('');
-    lines.push('Headers & CSP');
+    lines.push('Security Settings (headers)');
     const headers = result.responseHeaders || {};
-    lines.push(`Content-Security-Policy header: ${headers['content-security-policy'] || 'Not present'}`);
-    lines.push(`Strict-Transport-Security: ${headers['strict-transport-security'] || 'Not present'}`);
-    lines.push(`X-Content-Type-Options: ${headers['x-content-type-options'] || 'Not present'}`);
-    lines.push(`Referrer-Policy: ${headers['referrer-policy'] || 'Not present'}`);
-    lines.push(`Permissions-Policy: ${headers['permissions-policy'] || 'Not present'}`);
+    lines.push(`Rules for allowed scripts (CSP): ${headers['content-security-policy'] || 'Not present'}`);
+    lines.push(`Force HTTPS (HSTS): ${headers['strict-transport-security'] || 'Not present'}`);
+    lines.push(`MIME type protection: ${headers['x-content-type-options'] || 'Not present'}`);
+    lines.push(`Referrer privacy setting: ${headers['referrer-policy'] || 'Not present'}`);
+    lines.push(`Browser permissions limits: ${headers['permissions-policy'] || 'Not present'}`);
     if (result.cspMeta && result.cspMeta.length > 0) {
       result.cspMeta.forEach((val, idx) => {
         lines.push(`CSP meta tag ${idx + 1}: ${val}`);

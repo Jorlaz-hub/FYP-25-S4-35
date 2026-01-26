@@ -498,11 +498,6 @@ document.addEventListener('DOMContentLoaded', function () {
     fullReviewBtn.addEventListener('click', handleFullReview);
   }
 
-  var downloadBtn = document.getElementById('downloadBtn');
-  if (downloadBtn) {
-    downloadBtn.addEventListener('click', handleDownload);
-  }
-
   var openMorePageBtn = document.getElementById('openMorePageBtn');
   if (openMorePageBtn) {
     openMorePageBtn.addEventListener('click', function () {

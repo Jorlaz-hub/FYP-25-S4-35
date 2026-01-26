@@ -48,19 +48,30 @@
 
     // calculate high-level stats for the report
     var inlineScripts = scripts.filter(function (s) { return !s.src; }).length;
+    var inlineScriptsUnsafe = scripts.filter(function (s) { return !s.src && !s.hasNonce; }).length;
+    var obfuscatedInlineUnsafe = scripts.filter(function (s) { return !s.src && !s.hasNonce && s.isObfuscated; }).length;
     var externalScripts = scripts.length - inlineScripts;
 
     // --- 3rd PARTY DETECTION ---
     // compare script origin domain to current page origin 
     var thirdPartyScripts = 0;
+    var thirdPartyScriptsUnsafe = 0;
+    var thirdPartyNoSRI = 0;
     try {
       var pageOrigin = new URL(location.href).origin;
       scripts.forEach(function (s) {
         if (!s.src) return;
         try {
-          var origin = new URL(s.src, location.href).origin;
+          var resolved = new URL(s.src, location.href);
+          var origin = resolved.origin;
           // diff origin = 3rd party script (to improve)
-          if (origin !== pageOrigin) thirdPartyScripts += 1;
+          if (origin !== pageOrigin) {
+            thirdPartyScripts += 1;
+            if (!s.integrity) thirdPartyNoSRI += 1;
+            if (!s.integrity || resolved.protocol !== 'https:') {
+              thirdPartyScriptsUnsafe += 1;
+            }
+          }
         } catch (e) { /* Ignore invalid URLs */ }
       });
     } catch (e) { /* Ignore parsing errors */ }
@@ -96,6 +107,10 @@
       .map(function (s) { return s.textSample || ''; })
       .join('\n')
       .slice(0, 50000);
+    var inlineTextCombinedUnsafe = scripts.filter(function (s) { return !s.src && !s.hasNonce; })
+      .map(function (s) { return s.textSample || ''; })
+      .join('\n')
+      .slice(0, 50000);
 
     function countMatches(str, regex, cap) {
       var m, c = 0;
@@ -111,16 +126,23 @@
     var templateMarkers = inlineTextCombined
       ? (countMatches(inlineTextCombined, /\{\{[^}]+\}\}/g, 200) + countMatches(inlineTextCombined, /<%[^%]*%>/g, 200))
       : 0;
+    var templateMarkersUnsafe = inlineTextCombinedUnsafe
+      ? (countMatches(inlineTextCombinedUnsafe, /\{\{[^}]+\}\}/g, 200) + countMatches(inlineTextCombinedUnsafe, /<%[^%]*%>/g, 200))
+      : 0;
 
     // Check for Hardcoded Secrets
     // Variable assignments like "api_key = '...'" or "Bearer '...'"
     var tokenHits = inlineTextCombined
       ? countMatches(inlineTextCombined, /(api[_-]?key|access[_-]?token|secret|bearer|authorization)\s*[:=]\s*['"][A-Za-z0-9_\-]{10,}/gi, 200)
       : 0;
+    var tokenHitsUnsafe = inlineTextCombinedUnsafe
+      ? countMatches(inlineTextCombinedUnsafe, /(api[_-]?key|access[_-]?token|secret|bearer|authorization)\s*[:=]\s*['"][A-Za-z0-9_\-]{10,}/gi, 200)
+      : 0;
 
     // --- ENHANCED FORM ANALYSIS ---
     var formsTotal = document.forms ? document.forms.length : 0;
     var formsWithoutCsrf = 0;
+    var formsWithoutCsrfUnsafe = 0;
     var insecureForms = 0; 
     
     Array.prototype.slice.call(document.forms || []).forEach(function (form) {
@@ -147,6 +169,19 @@
             insecureForms += 1;
           }
         } catch (e) { /* ignore relative paths */ }
+      }
+
+      // Only count missing CSRF when it is meaningful:
+      // same-origin POST forms without a CSRF token.
+      if (!hasToken && method === 'POST') {
+        var isSameOrigin = true;
+        if (form.action) {
+          try {
+            var actionUrl = new URL(form.action, window.location.href);
+            if (actionUrl.origin !== window.location.origin) isSameOrigin = false;
+          } catch (e) { /* assume relative => same origin */ }
+        }
+        if (isSameOrigin) formsWithoutCsrfUnsafe += 1;
       }
     });
 
@@ -185,13 +220,20 @@
         scripts: scripts,
         cspMeta: cspMeta,
         inlineScripts: inlineScripts,
+        inlineScriptsUnsafe: inlineScriptsUnsafe,
         externalScripts: externalScripts,
         thirdPartyScripts: thirdPartyScripts,
+        thirdPartyScriptsUnsafe: thirdPartyScriptsUnsafe,
+        thirdPartyNoSRI: thirdPartyNoSRI,
         inlineEventHandlers: inlineEventHandlers,
+        obfuscatedInlineUnsafe: obfuscatedInlineUnsafe,
         templateMarkers: templateMarkers,
+        templateMarkersUnsafe: templateMarkersUnsafe,
         tokenHits: tokenHits,
+        tokenHitsUnsafe: tokenHitsUnsafe,
         formsTotal: formsTotal,
         formsWithoutCsrf: formsWithoutCsrf,
+        formsWithoutCsrfUnsafe: formsWithoutCsrfUnsafe,
 
         insecureForms: insecureForms, // Forms with GET-passwords or external actions
         unsafeLinks: unsafeLinks      // Links vulnerable to reverse tabnabbing

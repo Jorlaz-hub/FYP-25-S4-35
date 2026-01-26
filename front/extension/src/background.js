@@ -7,7 +7,7 @@
  * 3. [NEW] Cookie Security Analysis
  */
 
-importScripts('src/sharedAlgo.js');
+importScripts('sharedAlgo.js');
 
 var CHECKS_KEY = 'checksConfig';
 

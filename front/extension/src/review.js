@@ -30,13 +30,16 @@
     var container = document.getElementById('findings');
     if (!container) return;
     container.innerHTML = '';
+    var templateMarkers = info.templateMarkersUnsafe != null ? info.templateMarkersUnsafe : (info.templateMarkers || 0);
+    var tokenHits = info.tokenHitsUnsafe != null ? info.tokenHitsUnsafe : (info.tokenHits || 0);
+    var formsWithoutCsrf = info.formsWithoutCsrfUnsafe != null ? info.formsWithoutCsrfUnsafe : (info.formsWithoutCsrf || 0);
     var items = [
       { title: 'Scripts', body: 'Total: ' + info.scripts.length + '; Inline: ' + (info.inlineScripts || 0) + '; External: ' + (info.externalScripts || (info.scripts.length - (info.inlineScripts || 0))) + '; Third-party: ' + (info.thirdPartyScripts || 0) },
       { title: 'CSP Meta Tags', body: (info.cspMeta && info.cspMeta.length ? 'Present (' + info.cspMeta.length + ')' : 'Missing') },
       { title: 'Inline Event Handlers', body: String(info.inlineEventHandlers || 0) },
-      { title: 'Template markers', body: String(info.templateMarkers || 0) },
-      { title: 'Token-like strings detected', body: String(info.tokenHits || 0) },
-      { title: 'Forms without CSRF tokens', body: String(info.formsWithoutCsrf || 0) + ' of ' + String(info.formsTotal || 0) }
+      { title: 'Template markers', body: String(templateMarkers) },
+      { title: 'Token-like strings detected', body: String(tokenHits) },
+      { title: 'Forms without CSRF tokens', body: String(formsWithoutCsrf) + ' of ' + String(info.formsTotal || 0) }
     ];
     items.forEach(function (it) {
       var block = document.createElement('div');
@@ -216,8 +219,8 @@
 
     var exposureInsights = [
       { title: 'Third-party scripts', body: thirdParty + ' script(s) loaded from third-party origins.' },
-      { title: 'Token-like strings', body: String(info.tokenHits || 0) + ' potential token/secret matches.' },
-      { title: 'Forms without CSRF', body: String(info.formsWithoutCsrf || 0) + ' of ' + String(info.formsTotal || 0) }
+      { title: 'Token-like strings', body: String(info.tokenHitsUnsafe != null ? info.tokenHitsUnsafe : (info.tokenHits || 0)) + ' potential token/secret matches.' },
+      { title: 'Forms without CSRF', body: String(info.formsWithoutCsrfUnsafe != null ? info.formsWithoutCsrfUnsafe : (info.formsWithoutCsrf || 0)) + ' of ' + String(info.formsTotal || 0) }
     ];
 
     card('structure', 'Structure', areas.structure.score, areas.structure.severity, structureInsights, 'structure');
@@ -236,8 +239,8 @@
       responseHeaders: data.result.responseHeaders || {},
       inlineEventHandlers: data.result.inlineEventHandlers,
       templateMarkers: data.result.templateMarkers,
-      tokenHits: data.result.tokenHits,
-      formsWithoutCsrf: data.result.formsWithoutCsrf,
+      tokenHits: data.result.tokenHitsUnsafe != null ? data.result.tokenHitsUnsafe : data.result.tokenHits,
+      formsWithoutCsrf: data.result.formsWithoutCsrfUnsafe != null ? data.result.formsWithoutCsrfUnsafe : data.result.formsWithoutCsrf,
       formsTotal: data.result.formsTotal
     };
     var blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
