@@ -7,6 +7,7 @@ document.addEventListener('DOMContentLoaded', function () {
   var downloadSelectedRow = document.getElementById('downloadSelectedRow');
   var downloadSelectedBtn = document.getElementById('downloadSelectedBtn');
   var generateReportBtn = document.getElementById('generateReportBtn');
+  var fullReviewBtn = document.getElementById('fullReviewBtn');
 
   var historyVisible = false;
 
@@ -151,6 +152,41 @@ document.addEventListener('DOMContentLoaded', function () {
             window.open(reportUrl, '_blank');
           }
         );
+      });
+    });
+  }
+
+  if (fullReviewBtn) {
+    fullReviewBtn.addEventListener('click', function () {
+      if (!historyContainer) return;
+      var checkedBoxes = historyContainer.querySelectorAll('input[type="checkbox"]:checked');
+
+      if (checkedBoxes.length === 0) {
+        alert('Need to select a past scan');
+        return;
+      }
+
+      if (checkedBoxes.length > 1) {
+        alert('only one past scan can be selected at a time');
+        return;
+      }
+
+      var cb = checkedBoxes[0];
+      var site = cb.dataset.site;
+      var index = cb.dataset.index;
+      var key = 'scan:' + site;
+
+      chrome.storage.local.get(key, function (data) {
+        var entry = data[key] && data[key][index];
+        if (!entry) {
+          alert('Selected scan could not be found.');
+          return;
+        }
+
+        chrome.storage.local.set({ reviewTargetKey: key }, function () {
+          var reviewUrl = chrome.runtime.getURL('src/review.html');
+          window.open(reviewUrl, '_blank');
+        });
       });
     });
   }

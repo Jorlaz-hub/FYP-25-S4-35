@@ -356,17 +356,6 @@ function handleRefresh() {
   loadResults();
 }
 
-function handleFullReview() {
-  if (!latestEntry || !latestEntry.result) {
-    setStatus('Run a scan first to view the full review.');
-    return;
-  }
-  var key = 'scan:' + latestEntry.result.url;
-  chrome.storage.local.set({ reviewTargetKey: key }, function () {
-    chrome.tabs.create({ url: chrome.runtime.getURL('src/review.html') });
-  });
-}
-
 function handleDownload() {
   if (!latestEntry || !latestEntry.result) {
     setStatus('Run a scan first to download a report.');
@@ -491,11 +480,6 @@ document.addEventListener('DOMContentLoaded', function () {
   var refreshBtn = document.getElementById('refreshBtn');
   if (refreshBtn) {
     refreshBtn.addEventListener('click', handleRefresh);
-  }
-
-  var fullReviewBtn = document.getElementById('fullReviewBtn');
-  if (fullReviewBtn) {
-    fullReviewBtn.addEventListener('click', handleFullReview);
   }
 
   var openMorePageBtn = document.getElementById('openMorePageBtn');
