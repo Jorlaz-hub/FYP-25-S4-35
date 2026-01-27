@@ -63,8 +63,32 @@ document.addEventListener('DOMContentLoaded', () => {
       labelEl.className = 'summary-label';
       labelEl.textContent = label;
 
-      const valueEl = document.createElement('div');
-      valueEl.textContent = value;
+      let valueEl;
+      if (label === 'URL') {
+        item.classList.add('summary-url-item');
+        valueEl = document.createElement('div');
+        valueEl.className = 'summary-url';
+
+        const urlText = document.createElement('span');
+        urlText.className = 'summary-url-text';
+        urlText.textContent = value;
+
+        const copyBtn = document.createElement('button');
+        copyBtn.type = 'button';
+        copyBtn.className = 'copy-url-btn';
+        copyBtn.title = 'Copy URL';
+        copyBtn.setAttribute('aria-label', 'Copy URL');
+        copyBtn.textContent = '⧉';
+        copyBtn.addEventListener('click', () => {
+          copyToClipboard(String(value));
+        });
+
+        valueEl.appendChild(urlText);
+        item.appendChild(copyBtn);
+      } else {
+        valueEl = document.createElement('div');
+        valueEl.textContent = value;
+      }
 
       item.appendChild(labelEl);
       item.appendChild(valueEl);
@@ -223,5 +247,31 @@ document.addEventListener('DOMContentLoaded', () => {
     a.download = filename;
     a.click();
     URL.revokeObjectURL(url);
+  }
+
+  function copyToClipboard(text) {
+    if (navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(text).catch(() => {
+        fallbackCopy(text);
+      });
+      return;
+    }
+    fallbackCopy(text);
+  }
+
+  function fallbackCopy(text) {
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.setAttribute('readonly', '');
+    textarea.style.position = 'fixed';
+    textarea.style.opacity = '0';
+    document.body.appendChild(textarea);
+    textarea.select();
+    try {
+      document.execCommand('copy');
+    } catch (err) {
+      // No-op if copy fails in restricted contexts.
+    }
+    document.body.removeChild(textarea);
   }
 });

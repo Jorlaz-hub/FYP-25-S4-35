@@ -43,13 +43,41 @@ document.addEventListener('DOMContentLoaded', function () {
           return;
         }
 
-        scanKeys.forEach(function (key) {
+        scanKeys.forEach(function (key, siteIndex) {
           var historyList = data[key] || [];
           var url = key.replace('scan:', '');
 
-          var title = document.createElement('h3');
-          title.textContent = url;
-          historyContainer.appendChild(title);
+          var siteCard = document.createElement('div');
+          siteCard.className = 'history-site';
+
+          var urlBar = document.createElement('div');
+          urlBar.className = 'history-url-bar';
+
+          var urlIndex = document.createElement('span');
+          urlIndex.className = 'history-url-index';
+          urlIndex.textContent = String(siteIndex + 1);
+
+          var urlText = document.createElement('span');
+          urlText.className = 'history-url-text';
+          urlText.textContent = url;
+
+          var copyBtn = document.createElement('button');
+          copyBtn.type = 'button';
+          copyBtn.className = 'history-copy-btn';
+          copyBtn.title = 'Copy URL';
+          copyBtn.setAttribute('aria-label', 'Copy URL');
+          copyBtn.textContent = 'Copy';
+          copyBtn.addEventListener('click', function () {
+            copyToClipboard(url);
+          });
+
+          urlBar.appendChild(urlIndex);
+          urlBar.appendChild(urlText);
+          urlBar.appendChild(copyBtn);
+          siteCard.appendChild(urlBar);
+
+          var scanList = document.createElement('ul');
+          scanList.className = 'history-scan-list';
 
           historyList.forEach(function (entry, index) {
             var row = document.createElement('label');
@@ -65,13 +93,33 @@ document.addEventListener('DOMContentLoaded', function () {
             var score = entry.areas && entry.areas.overall ? entry.areas.overall.score : '--';
             var severity = entry.areas && entry.areas.overall ? entry.areas.overall.severity : '--';
 
-            var text = document.createElement('span');
-            text.textContent = date + ' - Score: ' + score + ' (' + severity + ')';
+            var meta = document.createElement('div');
+            meta.className = 'scan-meta';
+
+            var dateText = document.createElement('span');
+            dateText.className = 'scan-date';
+            dateText.textContent = date;
+
+            var scoreText = document.createElement('span');
+            scoreText.className = 'scan-score';
+            scoreText.textContent = 'Score: ' + score;
+
+            if (severity !== '--') {
+              var badge = document.createElement('span');
+              badge.className = 'severity-badge ' + String(severity).toLowerCase();
+              badge.textContent = severity;
+              scoreText.appendChild(badge);
+            }
 
             row.appendChild(checkbox);
-            row.appendChild(text);
-            historyContainer.appendChild(row);
+            meta.appendChild(dateText);
+            meta.appendChild(scoreText);
+            row.appendChild(meta);
+            scanList.appendChild(row);
           });
+
+          siteCard.appendChild(scanList);
+          historyContainer.appendChild(siteCard);
         });
 
         updateDownloadSelectedVisibility();
@@ -234,5 +282,31 @@ document.addEventListener('DOMContentLoaded', function () {
     if (!historyContainer || !downloadSelectedRow) return;
     var checkedCount = historyContainer.querySelectorAll('input[type="checkbox"]:checked').length;
     downloadSelectedRow.style.display = checkedCount > 0 ? 'flex' : 'none';
+  }
+
+  function copyToClipboard(text) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).catch(function () {
+        fallbackCopy(text);
+      });
+      return;
+    }
+    fallbackCopy(text);
+  }
+
+  function fallbackCopy(text) {
+    var textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.setAttribute('readonly', '');
+    textarea.style.position = 'fixed';
+    textarea.style.opacity = '0';
+    document.body.appendChild(textarea);
+    textarea.select();
+    try {
+      document.execCommand('copy');
+    } catch (err) {
+      // No-op if copy fails in restricted contexts.
+    }
+    document.body.removeChild(textarea);
   }
 });
