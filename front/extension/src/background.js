@@ -10,12 +10,49 @@
 importScripts('sharedAlgo.js');
 
 var CHECKS_KEY = 'checksConfig';
+var WHITELIST_KEY = 'whitelistPatterns';
 
 // cache recent response headers per tab
 var latestHeadersByTab = {};
 
 // set scan data history limit
 var HISTORY_LIMIT = 20;
+
+function normalizePatterns(value) {
+  if (!value) return [];
+  if (Array.isArray(value)) {
+    return value.map(function (v) { return String(v || '').trim(); }).filter(Boolean);
+  }
+  return String(value)
+    .split('\n')
+    .map(function (v) { return v.trim(); })
+    .filter(Boolean);
+}
+
+function hostMatchesPattern(host, pattern) {
+  var p = String(pattern || '').toLowerCase();
+  var h = String(host || '').toLowerCase();
+  if (!p || !h) return false;
+  if (p.indexOf('*.') === 0) {
+    var base = p.slice(2);
+    if (!base) return false;
+    return h.endsWith('.' + base);
+  }
+  return h === p || h.endsWith('.' + p);
+}
+
+function isUrlWhitelisted(url, whitelist) {
+  var host = '';
+  try {
+    host = new URL(url).hostname;
+  } catch (e) {
+    return false;
+  }
+
+  var wl = normalizePatterns(whitelist);
+  if (!wl.length) return false;
+  return wl.some(function (p) { return hostMatchesPattern(host, p); });
+}
 
 chrome.runtime.onMessage.addListener(function (message, sender) {
   if (message && message.kind === 'pageScanResult') {
@@ -25,8 +62,9 @@ chrome.runtime.onMessage.addListener(function (message, sender) {
     message.responseHeaders = headerCache ? headerCache.headers : {};
 
     function saveScanWithCookies(cookieStats) {
-      chrome.storage.local.get(['scanEnabled', key, CHECKS_KEY], function (data) {
+      chrome.storage.local.get(['scanEnabled', key, CHECKS_KEY, WHITELIST_KEY], function (data) {
         if (data.scanEnabled === false) return;
+        if (isUrlWhitelisted(message.url, data[WHITELIST_KEY])) return;
         var checks = data[CHECKS_KEY] || {};
         var cookieEnabled = typeof checks.cookie === 'boolean' ? checks.cookie : true;
         var safeStats = cookieEnabled ? cookieStats : { missingHttpOnly: 0, missingSecure: 0, missingSameSite: 0 };

@@ -13,19 +13,14 @@
         <h1>Script Inspector</h1>
       </div>
       <div class="header-actions">
+        <button id="refreshBtn" type="button" class="ghost-btn secondary">Refresh</button>
         <button id="settingsBtn" type="button" class="icon-btn" title="Settings" aria-label="Settings">
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M12 8.75a3.25 3.25 0 1 0 0 6.5a3.25 3.25 0 0 0 0-6.5Zm9.25 3.25a7.9 7.9 0 0 0-.17-1.63l2-1.56-2-3.46-2.39.96a7.9 7.9 0 0 0-2.82-1.63L13.25 2h-2.5l-.62 2.68a7.9 7.9 0 0 0-2.82 1.63l-2.39-.96-2 3.46 2 1.56A7.9 7.9 0 0 0 4.75 12c0 .56.06 1.1.17 1.63l-2 1.56 2 3.46 2.39-.96a7.9 7.9 0 0 0 2.82 1.63L10.75 22h2.5l.62-2.68a7.9 7.9 0 0 0 2.82-1.63l2.39.96 2-3.46-2-1.56c.11-.53.17-1.07.17-1.63Z" />
-          </svg>
-        </button>
-        <button id="morePanelBtn" type="button" class="icon-btn" title="More" aria-label="More">
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <circle cx="12" cy="5" r="2" />
             <circle cx="12" cy="12" r="2" />
             <circle cx="12" cy="19" r="2" />
           </svg>
         </button>
-        <button id="refreshBtn" type="button" class="ghost-btn secondary">Refresh</button>
       </div>
     </header>
 
@@ -94,224 +89,307 @@
         <div class="view-header">
           <button id="settingsBack" type="button" class="back-btn">Back</button>
           <div>
-            <div class="view-title">Checks</div>
-            <div class="view-sub">Choose which indicators affect the score.</div>
+            <div class="view-title">Settings</div>
+            <div class="view-sub">Manage scanning, storage, and checks.</div>
           </div>
         </div>
 
-        <div class="card settings-card">
-          <div class="settings-row">
+        <div class="settings-card">
+          <button id="settingsToggle" type="button" class="settings-row dropdown-row dropdown-toggle" aria-expanded="false">
             <div class="settings-copy">
-              <div class="settings-title">Enable all checks</div>
-              <div class="settings-desc">Toggle every indicator on or off.</div>
+              <div class="settings-title">Extension settings</div>
+              <div class="settings-desc">Manage scanning and storage.</div>
             </div>
-            <label class="toggle-switch">
-              <input type="checkbox" id="checksAll" />
-              <span class="slider"></span>
-            </label>
-          </div>
-          <div class="settings-row">
-            <div class="settings-copy">
-              <div class="settings-title">HTTPS only</div>
-              <div class="settings-desc">Penalize pages served without HTTPS.</div>
+            <span class="dropdown-action">Show</span>
+          </button>
+          <div id="settingsBody" class="checks-body" aria-hidden="true">
+            <button id="checksToggle" type="button" class="settings-row dropdown-row dropdown-toggle" aria-expanded="false">
+              <div class="settings-copy">
+                <div class="settings-title">Checks</div>
+                <div class="settings-desc">Configure scoring indicators.</div>
+              </div>
+              <span class="dropdown-action">Show</span>
+            </button>
+            <div id="checksBody" class="checks-body" aria-hidden="true">
+              <div class="settings-row">
+                <div class="settings-copy">
+                  <div class="settings-title">Enable all checks</div>
+                  <div class="settings-desc">Toggle every indicator on or off.</div>
+                </div>
+                <label class="toggle-switch">
+                  <input type="checkbox" id="checksAll" />
+                  <span class="slider"></span>
+                </label>
+              </div>
+              <div class="settings-row">
+                <div class="settings-copy">
+                  <div class="settings-title">HTTPS only</div>
+                  <div class="settings-desc">Penalize pages served without HTTPS.</div>
+                </div>
+                <label class="toggle-switch">
+                  <input type="checkbox" data-check="https" />
+                  <span class="slider"></span>
+                </label>
+              </div>
+              <div class="settings-row">
+                <div class="settings-copy">
+                  <div class="settings-title">CSP header</div>
+                  <div class="settings-desc">Require a Content-Security-Policy header.</div>
+                </div>
+                <label class="toggle-switch">
+                  <input type="checkbox" data-check="csp" />
+                  <span class="slider"></span>
+                </label>
+              </div>
+              <div class="settings-row">
+                <div class="settings-copy">
+                  <div class="settings-title">CSP quality</div>
+                  <div class="settings-desc">Flag unsafe-inline/unsafe-eval/data in CSP.</div>
+                </div>
+                <label class="toggle-switch">
+                  <input type="checkbox" data-check="cspQuality" />
+                  <span class="slider"></span>
+                </label>
+              </div>
+              <div class="settings-row">
+                <div class="settings-copy">
+                  <div class="settings-title">HSTS header</div>
+                  <div class="settings-desc">Check Strict-Transport-Security.</div>
+                </div>
+                <label class="toggle-switch">
+                  <input type="checkbox" data-check="hsts" />
+                  <span class="slider"></span>
+                </label>
+              </div>
+              <div class="settings-row">
+                <div class="settings-copy">
+                  <div class="settings-title">X-Content-Type-Options</div>
+                  <div class="settings-desc">Check MIME sniffing protection.</div>
+                </div>
+                <label class="toggle-switch">
+                  <input type="checkbox" data-check="xcto" />
+                  <span class="slider"></span>
+                </label>
+              </div>
+              <div class="settings-row">
+                <div class="settings-copy">
+                  <div class="settings-title">Referrer-Policy</div>
+                  <div class="settings-desc">Check referrer leakage controls.</div>
+                </div>
+                <label class="toggle-switch">
+                  <input type="checkbox" data-check="referrer" />
+                  <span class="slider"></span>
+                </label>
+              </div>
+              <div class="settings-row">
+                <div class="settings-copy">
+                  <div class="settings-title">Permissions-Policy</div>
+                  <div class="settings-desc">Check powerful feature restrictions.</div>
+                </div>
+                <label class="toggle-switch">
+                  <input type="checkbox" data-check="permissions" />
+                  <span class="slider"></span>
+                </label>
+              </div>
+              <div class="settings-row">
+                <div class="settings-copy">
+                  <div class="settings-title">Third-party scripts</div>
+                  <div class="settings-desc">Penalize scripts loaded from other origins.</div>
+                </div>
+                <label class="toggle-switch">
+                  <input type="checkbox" data-check="thirdParty" />
+                  <span class="slider"></span>
+                </label>
+              </div>
+              <div class="settings-row">
+                <div class="settings-copy">
+                  <div class="settings-title">SRI on external scripts</div>
+                  <div class="settings-desc">Require integrity hashes on external scripts.</div>
+                </div>
+                <label class="toggle-switch">
+                  <input type="checkbox" data-check="sri" />
+                  <span class="slider"></span>
+                </label>
+              </div>
+              <div class="settings-row">
+                <div class="settings-copy">
+                  <div class="settings-title">Inline scripts</div>
+                  <div class="settings-desc">Penalize inline &lt;script&gt; blocks.</div>
+                </div>
+                <label class="toggle-switch">
+                  <input type="checkbox" data-check="inlineScripts" />
+                  <span class="slider"></span>
+                </label>
+              </div>
+              <div class="settings-row">
+                <div class="settings-copy">
+                  <div class="settings-title">Inline event handlers</div>
+                  <div class="settings-desc">Detect onclick/onload attributes.</div>
+                </div>
+                <label class="toggle-switch">
+                  <input type="checkbox" data-check="inlineEvents" />
+                  <span class="slider"></span>
+                </label>
+              </div>
+              <div class="settings-row">
+                <div class="settings-copy">
+                  <div class="settings-title">Template markers</div>
+                  <div class="settings-desc">Detect {{ }} or &lt;% %&gt; markers.</div>
+                </div>
+                <label class="toggle-switch">
+                  <input type="checkbox" data-check="templateMarkers" />
+                  <span class="slider"></span>
+                </label>
+              </div>
+              <div class="settings-row">
+                <div class="settings-copy">
+                  <div class="settings-title">Obfuscated scripts</div>
+                  <div class="settings-desc">Detect packed or high-entropy inline code.</div>
+                </div>
+                <label class="toggle-switch">
+                  <input type="checkbox" data-check="obfuscated" />
+                  <span class="slider"></span>
+                </label>
+              </div>
+              <div class="settings-row">
+                <div class="settings-copy">
+                  <div class="settings-title">Reverse tabnabbing</div>
+                  <div class="settings-desc">Check target=_blank links without noopener.</div>
+                </div>
+                <label class="toggle-switch">
+                  <input type="checkbox" data-check="unsafeLinks" />
+                  <span class="slider"></span>
+                </label>
+              </div>
+              <div class="settings-row">
+                <div class="settings-copy">
+                  <div class="settings-title">CSRF tokens</div>
+                  <div class="settings-desc">Check forms for CSRF/XSRF tokens.</div>
+                </div>
+                <label class="toggle-switch">
+                  <input type="checkbox" data-check="csrf" />
+                  <span class="slider"></span>
+                </label>
+              </div>
+              <div class="settings-row">
+                <div class="settings-copy">
+                  <div class="settings-title">Insecure forms</div>
+                  <div class="settings-desc">Detect GET-password forms or external actions.</div>
+                </div>
+                <label class="toggle-switch">
+                  <input type="checkbox" data-check="insecureForms" />
+                  <span class="slider"></span>
+                </label>
+              </div>
+              <div class="settings-row">
+                <div class="settings-copy">
+                  <div class="settings-title">Token/secret patterns</div>
+                  <div class="settings-desc">Detect potential tokens in inline code.</div>
+                </div>
+                <label class="toggle-switch">
+                  <input type="checkbox" data-check="tokenHits" />
+                  <span class="slider"></span>
+                </label>
+              </div>
+              <div class="settings-row">
+                <div class="settings-copy">
+                  <div class="settings-title">Cookie (background script)</div>
+                  <div class="settings-desc">Include cookie attribute checks in scoring.</div>
+                </div>
+                <label class="toggle-switch">
+                  <input type="checkbox" data-check="cookie" />
+                  <span class="slider"></span>
+                </label>
+              </div>
             </div>
-            <label class="toggle-switch">
-              <input type="checkbox" data-check="https" />
-              <span class="slider"></span>
-            </label>
-          </div>
-          <div class="settings-row">
-            <div class="settings-copy">
-              <div class="settings-title">CSP header</div>
-              <div class="settings-desc">Require a Content-Security-Policy header.</div>
-            </div>
-            <label class="toggle-switch">
-              <input type="checkbox" data-check="csp" />
-              <span class="slider"></span>
-            </label>
-          </div>
-          <div class="settings-row">
-            <div class="settings-copy">
-              <div class="settings-title">CSP quality</div>
-              <div class="settings-desc">Flag unsafe-inline/unsafe-eval/data in CSP.</div>
-            </div>
-            <label class="toggle-switch">
-              <input type="checkbox" data-check="cspQuality" />
-              <span class="slider"></span>
-            </label>
-          </div>
-          <div class="settings-row">
-            <div class="settings-copy">
-              <div class="settings-title">HSTS header</div>
-              <div class="settings-desc">Check Strict-Transport-Security.</div>
-            </div>
-            <label class="toggle-switch">
-              <input type="checkbox" data-check="hsts" />
-              <span class="slider"></span>
-            </label>
-          </div>
-          <div class="settings-row">
-            <div class="settings-copy">
-              <div class="settings-title">X-Content-Type-Options</div>
-              <div class="settings-desc">Check MIME sniffing protection.</div>
-            </div>
-            <label class="toggle-switch">
-              <input type="checkbox" data-check="xcto" />
-              <span class="slider"></span>
-            </label>
-          </div>
-          <div class="settings-row">
-            <div class="settings-copy">
-              <div class="settings-title">Referrer-Policy</div>
-              <div class="settings-desc">Check referrer leakage controls.</div>
-            </div>
-            <label class="toggle-switch">
-              <input type="checkbox" data-check="referrer" />
-              <span class="slider"></span>
-            </label>
-          </div>
-          <div class="settings-row">
-            <div class="settings-copy">
-              <div class="settings-title">Permissions-Policy</div>
-              <div class="settings-desc">Check powerful feature restrictions.</div>
-            </div>
-            <label class="toggle-switch">
-              <input type="checkbox" data-check="permissions" />
-              <span class="slider"></span>
-            </label>
-          </div>
-          <div class="settings-row">
-            <div class="settings-copy">
-              <div class="settings-title">Third-party scripts</div>
-              <div class="settings-desc">Penalize scripts loaded from other origins.</div>
-            </div>
-            <label class="toggle-switch">
-              <input type="checkbox" data-check="thirdParty" />
-              <span class="slider"></span>
-            </label>
-          </div>
-          <div class="settings-row">
-            <div class="settings-copy">
-              <div class="settings-title">SRI on external scripts</div>
-              <div class="settings-desc">Require integrity hashes on external scripts.</div>
-            </div>
-            <label class="toggle-switch">
-              <input type="checkbox" data-check="sri" />
-              <span class="slider"></span>
-            </label>
-          </div>
-          <div class="settings-row">
-            <div class="settings-copy">
-              <div class="settings-title">Inline scripts</div>
-              <div class="settings-desc">Penalize inline &lt;script&gt; blocks.</div>
-            </div>
-            <label class="toggle-switch">
-              <input type="checkbox" data-check="inlineScripts" />
-              <span class="slider"></span>
-            </label>
-          </div>
-          <div class="settings-row">
-            <div class="settings-copy">
-              <div class="settings-title">Inline event handlers</div>
-              <div class="settings-desc">Detect onclick/onload attributes.</div>
-            </div>
-            <label class="toggle-switch">
-              <input type="checkbox" data-check="inlineEvents" />
-              <span class="slider"></span>
-            </label>
-          </div>
-          <div class="settings-row">
-            <div class="settings-copy">
-              <div class="settings-title">Template markers</div>
-              <div class="settings-desc">Detect {{ }} or &lt;% %&gt; markers.</div>
-            </div>
-            <label class="toggle-switch">
-              <input type="checkbox" data-check="templateMarkers" />
-              <span class="slider"></span>
-            </label>
-          </div>
-          <div class="settings-row">
-            <div class="settings-copy">
-              <div class="settings-title">Obfuscated scripts</div>
-              <div class="settings-desc">Detect packed or high-entropy inline code.</div>
-            </div>
-            <label class="toggle-switch">
-              <input type="checkbox" data-check="obfuscated" />
-              <span class="slider"></span>
-            </label>
-          </div>
-          <div class="settings-row">
-            <div class="settings-copy">
-              <div class="settings-title">Reverse tabnabbing</div>
-              <div class="settings-desc">Check target=_blank links without noopener.</div>
-            </div>
-            <label class="toggle-switch">
-              <input type="checkbox" data-check="unsafeLinks" />
-              <span class="slider"></span>
-            </label>
-          </div>
-          <div class="settings-row">
-            <div class="settings-copy">
-              <div class="settings-title">CSRF tokens</div>
-              <div class="settings-desc">Check forms for CSRF/XSRF tokens.</div>
-            </div>
-            <label class="toggle-switch">
-              <input type="checkbox" data-check="csrf" />
-              <span class="slider"></span>
-            </label>
-          </div>
-          <div class="settings-row">
-            <div class="settings-copy">
-              <div class="settings-title">Insecure forms</div>
-              <div class="settings-desc">Detect GET-password forms or external actions.</div>
-            </div>
-            <label class="toggle-switch">
-              <input type="checkbox" data-check="insecureForms" />
-              <span class="slider"></span>
-            </label>
-          </div>
-          <div class="settings-row">
-            <div class="settings-copy">
-              <div class="settings-title">Token/secret patterns</div>
-              <div class="settings-desc">Detect potential tokens in inline code.</div>
-            </div>
-            <label class="toggle-switch">
-              <input type="checkbox" data-check="tokenHits" />
-              <span class="slider"></span>
-            </label>
-          </div>
-          <div class="settings-row">
-            <div class="settings-copy">
-              <div class="settings-title">Cookie (background script)</div>
-              <div class="settings-desc">Include cookie attribute checks in scoring.</div>
-            </div>
-            <label class="toggle-switch">
-              <input type="checkbox" data-check="cookie" />
-              <span class="slider"></span>
-            </label>
-          </div>
-        </div>
-      </section>
 
-      <section id="moreView" class="view">
-        <div class="view-header">
-          <button id="moreBack" type="button" class="back-btn">Back</button>
-        </div>
+            <div class="settings-row">
+              <div class="settings-copy">
+                <div class="settings-title">Enable scanning</div>
+                <div class="settings-desc">Allow the extension to scan pages and record results.</div>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" id="settingsScanToggle" />
+                <span class="slider"></span>
+              </label>
+            </div>
+            <div class="settings-row">
+              <div class="settings-copy">
+                <div class="settings-title">Clear stored results</div>
+                <div class="settings-desc">Removes all cached scan data from this extension.</div>
+              </div>
+              <button id="settingsClearBtn" type="button" class="dark-btn">Clear all</button>
+            </div>
+          </div>
+          <button id="whitelistToggle" type="button" class="settings-row dropdown-row dropdown-toggle" aria-expanded="false">
+            <div class="settings-copy">
+              <div class="settings-title">Whitelist management</div>
+              <div class="settings-desc">Whitelisted sites bypass scans.</div>
+            </div>
+            <span class="dropdown-action">Show</span>
+          </button>
+          <div id="whitelistBody" class="checks-body" aria-hidden="true">
+            <div class="whitelist-panel">
+              <div class="whitelist-input">
+                <input id="whitelistInput" type="text" placeholder="Enter domain or press Add to whitelist current site" />
+                <button id="whitelistAddBtn" type="button" class="dark-btn secondary">Add</button>
+              </div>
+              <div class="whitelist-table">
+                <div class="whitelist-header">
+                  <span>Domain/URL</span>
+                  <span>Actions</span>
+                </div>
+                <div id="whitelistList" class="whitelist-body"></div>
+              </div>
+            </div>
+          </div>
 
-        <div class="card settings-card">
-          <div class="settings-row">
+          <button id="moreToggle" type="button" class="settings-row dropdown-row dropdown-toggle" aria-expanded="false">
             <div class="settings-copy">
               <div class="settings-title">More</div>
               <div class="settings-desc">Generate reports and deeper insights.</div>
             </div>
-            <button id="openMorePageBtn" type="button" class="dark-btn">Open</button>
-          </div>
-          <div class="settings-row">
-            <div class="settings-copy">
-              <div class="settings-title">Settings</div>
-              <div class="settings-desc">Manage scanning, storage, and checks.</div>
+            <span class="dropdown-action">Show</span>
+          </button>
+          <div id="moreBody" class="checks-body" aria-hidden="true">
+            <div class="settings-row">
+              <div class="settings-copy">
+                <div class="settings-title">Repository</div>
+                <div class="settings-desc">Open the project repository in a new tab.</div>
+              </div>
+              <button id="repoBtn" type="button" class="dark-btn">View repository</button>
             </div>
-            <button id="openSettingsPageBtn" type="button" class="dark-btn">Open</button>
+            <div class="settings-row">
+              <div class="settings-copy">
+                <div class="settings-title">History</div>
+                <div class="settings-desc">Load stored scan history for this browser.</div>
+              </div>
+              <button id="historyBtn" type="button" class="dark-btn secondary">View history</button>
+            </div>
+            <div id="historySection" class="history-section" style="display: none;">
+              <div id="historyContainer" class="history-container"></div>
+            </div>
+            <div class="settings-row">
+              <div class="settings-copy">
+                <div class="settings-title">Download all</div>
+                <div class="settings-desc">Export all stored scans as a JSON file.</div>
+              </div>
+              <button id="downloadAllBtn" type="button" class="dark-btn">Download</button>
+            </div>
+            <div class="settings-row">
+              <div class="settings-copy">
+                <div class="settings-title">Generate report</div>
+                <div class="settings-desc">Create a human-readable report for a selected scan.</div>
+              </div>
+              <button id="generateReportBtn" type="button" class="dark-btn">Generate report</button>
+            </div>
+            <div class="settings-row">
+              <div class="settings-copy">
+                <div class="settings-title">Full review</div>
+                <div class="settings-desc">Open the detailed security review for a selected scan.</div>
+              </div>
+              <button id="fullReviewBtn" type="button" class="dark-btn">Open full review</button>
+            </div>
           </div>
         </div>
       </section>

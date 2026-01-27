@@ -1,5 +1,6 @@
 var ENABLED_KEY = 'scanEnabled';
 var CHECKS_KEY = 'checksConfig';
+var WHITELIST_KEY = 'whitelistPatterns';
 var DEFAULT_CHECKS = SharedAlgo.DEFAULT_CHECKS;
 var normalizeChecks = SharedAlgo.normalizeChecks;
 var computeAreaScores = SharedAlgo.computeAreaScores;
@@ -20,6 +21,7 @@ var stateSnapshot = { enabled: true, hasResults: false };
 var latestEntry = null;
 var latestHealth = null;
 var latestAreas = null;
+var historyVisible = false;
 
 function formatRow(label, value) {
   var row = document.createElement('div');
@@ -44,6 +46,178 @@ function saveChecks(next, callback) {
   var obj = {}; obj[CHECKS_KEY] = next;
   chrome.storage.local.set(obj, function () {
     if (callback) callback();
+  });
+}
+
+function normalizePatterns(value) {
+  if (!value) return [];
+  if (Array.isArray(value)) {
+    return value.map(function (v) { return String(v || '').trim(); }).filter(Boolean);
+  }
+  return String(value)
+    .split('\n')
+    .map(function (v) { return v.trim(); })
+    .filter(Boolean);
+}
+
+function hostMatchesPattern(host, pattern) {
+  var p = String(pattern || '').toLowerCase();
+  var h = String(host || '').toLowerCase();
+  if (!p || !h) return false;
+  if (p.indexOf('*.') === 0) {
+    var base = p.slice(2);
+    if (!base) return false;
+    return h.endsWith('.' + base);
+  }
+  return h === p || h.endsWith('.' + p);
+}
+
+function getHostFromUrl(url) {
+  try {
+    var parsed = new URL(url);
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return '';
+    return parsed.hostname || '';
+  } catch (e) {
+    return '';
+  }
+}
+
+function evaluateAccess(url, whitelist) {
+  var host = '';
+  try {
+    host = new URL(url).hostname;
+  } catch (e) {
+    return { blocked: true, reason: 'Invalid URL.' };
+  }
+
+  var wl = normalizePatterns(whitelist);
+  var whitelisted = wl.some(function (p) { return hostMatchesPattern(host, p); });
+  return { blocked: false, whitelisted: whitelisted };
+}
+
+function setPluginState(label, color) {
+  var pluginState = document.getElementById('pluginState');
+  if (!pluginState) return;
+  pluginState.textContent = label;
+  if (color) pluginState.style.color = color;
+}
+
+function renderWhitelisted(url) {
+  var container = document.getElementById('results');
+  if (container) {
+    container.innerHTML = '';
+    var card = document.createElement('div');
+    card.className = 'card';
+    var row = document.createElement('div');
+    row.className = 'row';
+    var label = document.createElement('strong');
+    label.textContent = 'Whitelist';
+    var value = document.createElement('span');
+    value.textContent = url;
+    row.appendChild(label);
+    row.appendChild(value);
+    card.appendChild(row);
+    container.appendChild(card);
+  }
+  setHealthDisplay('100%', 'passed', 'Whitelisted', 360);
+  setPreviousHealthRing(null);
+  setPluginState('WHITELISTED', '#16a34a');
+  setStatus('Whitelisted: scan skipped.');
+  var scanBtn = document.getElementById('scanBtn');
+  if (scanBtn) scanBtn.disabled = true;
+}
+
+function renderUnavailable(message) {
+  var container = document.getElementById('results');
+  if (container) {
+    container.innerHTML = '';
+    var empty = document.createElement('div');
+    empty.className = 'empty';
+    empty.textContent = message || 'Unable to access this page.';
+    container.appendChild(empty);
+  }
+  setStatus(message || 'Unable to access this page.');
+}
+
+function renderList(container, items) {
+  if (!container) return;
+  container.innerHTML = '';
+  if (!items.length) {
+    var empty = document.createElement('div');
+    empty.className = 'whitelist-row';
+    empty.textContent = 'No entries yet.';
+    container.appendChild(empty);
+    return;
+  }
+
+  items.forEach(function (item) {
+    var row = document.createElement('div');
+    row.className = 'whitelist-row';
+    var label = document.createElement('span');
+    label.textContent = item;
+    var remove = document.createElement('button');
+    remove.type = 'button';
+    remove.className = 'whitelist-action';
+    remove.textContent = 'Delete';
+    remove.addEventListener('click', function () {
+      removePattern(item);
+    });
+    row.appendChild(label);
+    row.appendChild(remove);
+    container.appendChild(row);
+  });
+}
+
+function loadAllowlists() {
+  var whitelistList = document.getElementById('whitelistList');
+  chrome.storage.local.get([WHITELIST_KEY], function (data) {
+    var wl = normalizePatterns(data[WHITELIST_KEY]);
+    renderList(whitelistList, wl);
+  });
+}
+
+function addPattern(inputEl) {
+  if (!inputEl) return;
+  var value = String(inputEl.value || '').trim();
+  if (!value) {
+    withActiveTab(function (tab) {
+      var host = getHostFromUrl(tab.url);
+      if (!host) {
+        setStatus('Unable to whitelist this page.');
+        return;
+      }
+      addPatternValue(host, inputEl);
+    });
+    return;
+  }
+  addPatternValue(value, inputEl);
+}
+
+function addPatternValue(value, inputEl) {
+  var trimmed = String(value || '').trim();
+  if (!trimmed) return;
+  chrome.storage.local.get([WHITELIST_KEY], function (data) {
+    var items = normalizePatterns(data[WHITELIST_KEY]);
+    if (items.indexOf(trimmed) === -1) items.push(trimmed);
+    var obj = {}; obj[WHITELIST_KEY] = items;
+    chrome.storage.local.set(obj, function () {
+      if (inputEl) inputEl.value = '';
+      loadAllowlists();
+      setStatus('Whitelist updated.');
+    });
+  });
+}
+
+function removePattern(value) {
+  chrome.storage.local.get([WHITELIST_KEY], function (data) {
+    var items = normalizePatterns(data[WHITELIST_KEY]).filter(function (item) {
+      return item !== value;
+    });
+    var obj = {}; obj[WHITELIST_KEY] = items;
+    chrome.storage.local.set(obj, function () {
+      loadAllowlists();
+      setStatus('List updated.');
+    });
   });
 }
 
@@ -104,8 +278,7 @@ function bindCheckToggles() {
 function showView(viewName) {
   var views = {
     main: document.getElementById('mainView'),
-    settings: document.getElementById('settingsView'),
-    more: document.getElementById('moreView')
+    settings: document.getElementById('settingsView')
   };
   Object.keys(views).forEach(function (key) {
     if (!views[key]) return;
@@ -199,7 +372,9 @@ function updateStateUI() {
 function updateToggleUI(enabled) {
   var toggle = document.getElementById('scanToggle');
   var status = document.getElementById('toggleStatus');
+  var settingsToggle = document.getElementById('settingsScanToggle');
   if (toggle) toggle.checked = enabled;
+  if (settingsToggle) settingsToggle.checked = enabled;
   if (status) status.textContent = enabled ? 'Enabled' : 'Disabled';
   var scanBtn = document.getElementById('scanBtn');
   if (scanBtn) scanBtn.disabled = !enabled;
@@ -321,14 +496,24 @@ function render(results) {
 function loadResults() {
   withActiveTab(function (tab) {
     var key = 'scan:' + tab.url;
-    chrome.storage.local.get([key], function (data) {
+    chrome.storage.local.get([key, WHITELIST_KEY], function (data) {
+      var access = evaluateAccess(tab.url, data[WHITELIST_KEY]);
+      if (access.blocked) {
+        renderUnavailable(access.reason);
+        return;
+      }
+      if (access.whitelisted) {
+        renderWhitelisted(tab.url);
+        return;
+      }
+      updateToggleUI(stateSnapshot.enabled);
       render((data || {})[key] || []);
     });
   });
 }
 
 function runScan() {
-  chrome.storage.local.get([ENABLED_KEY], function (data) {
+  chrome.storage.local.get([ENABLED_KEY, WHITELIST_KEY], function (data) {
     var enabled = data[ENABLED_KEY];
     if (enabled === undefined) enabled = true;
     if (!enabled) {
@@ -336,6 +521,15 @@ function runScan() {
       return;
     }
     withActiveTab(function (tab) {
+      var access = evaluateAccess(tab.url, data[WHITELIST_KEY]);
+      if (access.blocked) {
+        renderUnavailable(access.reason);
+        return;
+      }
+      if (access.whitelisted) {
+        renderWhitelisted(tab.url);
+        return;
+      }
       setStatus('Running scan...');
       chrome.scripting.executeScript(
         { target: { tabId: tab.id }, files: ['src/contentScript.js'] },
@@ -384,9 +578,6 @@ function handleDownload() {
   setStatus('Report downloaded.');
 }
 
-function handleMore() {
-  showView('more');
-}
 
 function setHistoryVisibility(container, visible) {
   if (!container) return;
@@ -395,19 +586,22 @@ function setHistoryVisibility(container, visible) {
 }
 
 function handleHistory() {
+  var historySection = document.getElementById('historySection');
   var container = document.getElementById('historyContainer');
   var historyBtn = document.getElementById('historyBtn');
-  if (!container || !historyBtn) return;
+  if (!historySection || !container) return;
 
-  var isVisible = container.dataset.visible === 'true';
-  if (isVisible) {
-    setHistoryVisibility(container, false);
-    historyBtn.textContent = 'View';
+  if (historyVisible) {
+    historyVisible = false;
+    historySection.style.display = 'none';
+    container.innerHTML = '';
+    if (historyBtn) historyBtn.textContent = 'View history';
     return;
   }
 
-  setHistoryVisibility(container, true);
-  historyBtn.textContent = 'Hide';
+  historyVisible = true;
+  historySection.style.display = 'block';
+  if (historyBtn) historyBtn.textContent = 'Hide history';
   container.textContent = 'Loading history...';
 
   chrome.storage.local.get(null, function (data) {
@@ -418,43 +612,140 @@ function handleHistory() {
       return;
     }
 
-    scanKeys.forEach(function (key) {
-      var historyList = data[key];
+    scanKeys.forEach(function (key, siteIndex) {
+      var historyList = data[key] || [];
       var url = key.replace('scan:', '');
 
-      var title = document.createElement('h3');
-      title.textContent = url;
-      container.appendChild(title);
+      var siteCard = document.createElement('div');
+      siteCard.className = 'history-site';
 
-      var ul = document.createElement('ul');
-      historyList.forEach(function (entry) {
-        var li = document.createElement('li');
+      var urlBar = document.createElement('div');
+      urlBar.className = 'history-url-bar';
+
+      var urlIndex = document.createElement('span');
+      urlIndex.className = 'history-url-index';
+      urlIndex.textContent = String(siteIndex + 1);
+
+      var urlText = document.createElement('span');
+      urlText.className = 'history-url-text';
+      urlText.textContent = url;
+
+      var copyBtn = document.createElement('button');
+      copyBtn.type = 'button';
+      copyBtn.className = 'history-copy-btn';
+      copyBtn.title = 'Copy URL';
+      copyBtn.setAttribute('aria-label', 'Copy URL');
+      copyBtn.textContent = 'Copy';
+      copyBtn.addEventListener('click', function () {
+        copyToClipboard(url);
+      });
+
+      urlBar.appendChild(urlIndex);
+      urlBar.appendChild(urlText);
+      urlBar.appendChild(copyBtn);
+      siteCard.appendChild(urlBar);
+
+      var scanList = document.createElement('ul');
+      scanList.className = 'history-scan-list';
+
+      historyList.forEach(function (entry, index) {
+        var row = document.createElement('label');
+        row.className = 'scan-entry';
+
+        var checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.dataset.site = url;
+        checkbox.dataset.index = index;
+
         var date = entry.ts ? new Date(entry.ts).toLocaleString() : 'Unknown';
         var score = entry.areas && entry.areas.overall ? entry.areas.overall.score : '--';
         var severity = entry.areas && entry.areas.overall ? entry.areas.overall.severity : '--';
-        li.textContent = date + ' - Score: ' + score + ' (' + severity + ')';
-        ul.appendChild(li);
+
+        var meta = document.createElement('div');
+        meta.className = 'scan-meta';
+
+        var dateText = document.createElement('span');
+        dateText.className = 'scan-date';
+        dateText.textContent = date;
+
+        var scoreText = document.createElement('span');
+        scoreText.className = 'scan-score';
+        scoreText.textContent = 'Score: ' + score;
+
+        if (severity !== '--') {
+          var badge = document.createElement('span');
+          badge.className = 'severity-badge ' + String(severity).toLowerCase();
+          badge.textContent = severity;
+          scoreText.appendChild(badge);
+        }
+
+        row.appendChild(checkbox);
+        meta.appendChild(dateText);
+        meta.appendChild(scoreText);
+        row.appendChild(meta);
+        scanList.appendChild(row);
       });
 
-      container.appendChild(ul);
+      siteCard.appendChild(scanList);
+      container.appendChild(siteCard);
     });
   });
 }
 
+function getSelectedScan(container) {
+  if (!container) return null;
+  var checked = container.querySelectorAll('input[type="checkbox"]:checked');
+  if (!checked.length) return { error: 'Select a past scan first.' };
+  if (checked.length > 1) return { error: 'Select only one scan at a time.' };
+
+  var cb = checked[0];
+  return { site: cb.dataset.site, index: cb.dataset.index };
+}
+
+function copyToClipboard(text) {
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).catch(function () {
+      fallbackCopy(text);
+    });
+    return;
+  }
+  fallbackCopy(text);
+}
+
+function fallbackCopy(text) {
+  var textarea = document.createElement('textarea');
+  textarea.value = text;
+  textarea.setAttribute('readonly', '');
+  textarea.style.position = 'fixed';
+  textarea.style.opacity = '0';
+  document.body.appendChild(textarea);
+  textarea.select();
+  try {
+    document.execCommand('copy');
+  } catch (err) {
+    // No-op if copy fails in restricted contexts.
+  }
+  document.body.removeChild(textarea);
+}
+
 function handleClearStorage() {
+  if (!window.confirm('Clear all stored scan results?')) {
+    setStatus('Clear cancelled.');
+    return;
+  }
   chrome.storage.local.clear(function () {
     setStatus('All stored results cleared.');
     loadToggle();
     loadChecks(function () {
       loadResults();
     });
+    var historySection = document.getElementById('historySection');
     var container = document.getElementById('historyContainer');
-    if (container) {
-      setHistoryVisibility(container, false);
-      container.textContent = 'No history loaded yet.';
-    }
+    if (historySection) historySection.style.display = 'none';
+    if (container) container.textContent = 'No history loaded yet.';
+    historyVisible = false;
     var historyBtn = document.getElementById('historyBtn');
-    if (historyBtn) historyBtn.textContent = 'View';
+    if (historyBtn) historyBtn.textContent = 'View history';
   });
 }
 
@@ -462,6 +753,19 @@ document.addEventListener('DOMContentLoaded', function () {
   var toggle = document.getElementById('scanToggle');
   if (toggle) {
     toggle.addEventListener('change', function (e) {
+      var enabled = !!e.target.checked;
+      var obj = {}; obj[ENABLED_KEY] = enabled;
+      chrome.storage.local.set(obj);
+      updateToggleUI(enabled);
+      stateSnapshot.enabled = enabled;
+      updateStateUI();
+      setStatus(enabled ? 'Scanning enabled' : 'Scanning disabled');
+    });
+  }
+
+  var settingsToggle = document.getElementById('settingsScanToggle');
+  if (settingsToggle) {
+    settingsToggle.addEventListener('change', function (e) {
       var enabled = !!e.target.checked;
       var obj = {}; obj[ENABLED_KEY] = enabled;
       chrome.storage.local.set(obj);
@@ -482,25 +786,186 @@ document.addEventListener('DOMContentLoaded', function () {
     refreshBtn.addEventListener('click', handleRefresh);
   }
 
-  var openMorePageBtn = document.getElementById('openMorePageBtn');
-  if (openMorePageBtn) {
-    openMorePageBtn.addEventListener('click', function () {
-      chrome.tabs.create({ url: chrome.runtime.getURL('src/more.html') });
-    });
-  }
-
-  var openSettingsPageBtn = document.getElementById('openSettingsPageBtn');
-  if (openSettingsPageBtn) {
-    openSettingsPageBtn.addEventListener('click', function () {
-      chrome.tabs.create({ url: chrome.runtime.getURL('src/settings.html') });
-    });
-  }
-
   var settingsBtn = document.getElementById('settingsBtn');
   if (settingsBtn) {
     settingsBtn.addEventListener('click', function () {
       showView('settings');
-      loadChecks();
+    });
+  }
+
+  function setDropdownState(toggle, body, isOpen) {
+    if (!toggle || !body) return;
+    toggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+    body.setAttribute('aria-hidden', isOpen ? 'false' : 'true');
+    var action = toggle.querySelector('.dropdown-action');
+    if (action) action.textContent = isOpen ? 'Hide' : 'Show';
+  }
+
+  var settingsToggle = document.getElementById('settingsToggle');
+  var settingsBody = document.getElementById('settingsBody');
+  if (settingsToggle && settingsBody) {
+    settingsToggle.addEventListener('click', function () {
+      var isOpen = settingsBody.classList.toggle('is-open');
+      setDropdownState(settingsToggle, settingsBody, isOpen);
+    });
+  }
+
+  var checksToggle = document.getElementById('checksToggle');
+  var checksBody = document.getElementById('checksBody');
+  if (checksToggle && checksBody) {
+    checksToggle.addEventListener('click', function () {
+      var isOpen = checksBody.classList.toggle('is-open');
+      setDropdownState(checksToggle, checksBody, isOpen);
+      if (isOpen) loadChecks();
+    });
+  }
+
+  var moreToggle = document.getElementById('moreToggle');
+  var moreBody = document.getElementById('moreBody');
+  if (moreToggle && moreBody) {
+    moreToggle.addEventListener('click', function () {
+      var isOpen = moreBody.classList.toggle('is-open');
+      setDropdownState(moreToggle, moreBody, isOpen);
+    });
+  }
+
+  var whitelistToggle = document.getElementById('whitelistToggle');
+  var whitelistBody = document.getElementById('whitelistBody');
+  if (whitelistToggle && whitelistBody) {
+    whitelistToggle.addEventListener('click', function () {
+      var isOpen = whitelistBody.classList.toggle('is-open');
+      setDropdownState(whitelistToggle, whitelistBody, isOpen);
+    });
+  }
+
+  var settingsClearBtn = document.getElementById('settingsClearBtn');
+  if (settingsClearBtn) {
+    settingsClearBtn.addEventListener('click', handleClearStorage);
+  }
+
+  var whitelistInput = document.getElementById('whitelistInput');
+  var whitelistAddBtn = document.getElementById('whitelistAddBtn');
+
+  if (whitelistAddBtn && whitelistInput) {
+    whitelistAddBtn.addEventListener('click', function () {
+      addPattern(whitelistInput);
+    });
+    whitelistInput.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        addPattern(whitelistInput);
+      }
+    });
+  }
+
+  var repoBtn = document.getElementById('repoBtn');
+  if (repoBtn) {
+    repoBtn.addEventListener('click', function () {
+      var repoURL = 'https://github.com/Jorlaz-hub/FYP-25-S4-35.git';
+      window.open(repoURL, '_blank');
+    });
+  }
+
+  var historyBtn = document.getElementById('historyBtn');
+  if (historyBtn) {
+    historyBtn.addEventListener('click', function () {
+      handleHistory();
+    });
+  }
+
+  var downloadAllBtn = document.getElementById('downloadAllBtn');
+  if (downloadAllBtn) {
+    downloadAllBtn.addEventListener('click', function () {
+      chrome.storage.local.get(null, function (data) {
+        var scanHistory = {};
+
+        Object.keys(data).forEach(function (key) {
+          if (key.indexOf('scan:') === 0) {
+            scanHistory[key.replace('scan:', '')] = data[key];
+          }
+        });
+
+        if (Object.keys(scanHistory).length === 0) {
+          setStatus('No scan history available to download.');
+          return;
+        }
+
+        var json = JSON.stringify(scanHistory, null, 2);
+        var blob = new Blob([json], { type: 'application/json' });
+        var url = URL.createObjectURL(blob);
+
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = 'scan-history-' + new Date().toISOString().slice(0, 10) + '.json';
+        a.click();
+
+        URL.revokeObjectURL(url);
+        setStatus('History downloaded.');
+      });
+    });
+  }
+
+  var generateReportBtn = document.getElementById('generateReportBtn');
+  if (generateReportBtn) {
+    generateReportBtn.addEventListener('click', function () {
+      var historyContainer = document.getElementById('historyContainer');
+      var selected = getSelectedScan(historyContainer);
+      if (!selected || selected.error) {
+        setStatus(selected && selected.error ? selected.error : 'Select a past scan first.');
+        return;
+      }
+
+      var key = 'scan:' + selected.site;
+      chrome.storage.local.get(key, function (data) {
+        var entry = data[key] && data[key][selected.index];
+        if (!entry) {
+          setStatus('Selected scan could not be found.');
+          return;
+        }
+
+        var reportId = 'report-' + Date.now();
+        var storageKey = 'report:' + reportId;
+
+        chrome.storage.local.set(
+          (function () {
+            var obj = {};
+            obj[storageKey] = { site: selected.site, entry: entry };
+            return obj;
+          })(),
+          function () {
+            var reportUrl = chrome.runtime.getURL(
+              'src/report.html?id=' + encodeURIComponent(reportId)
+            );
+            window.open(reportUrl, '_blank');
+          }
+        );
+      });
+    });
+  }
+
+  var fullReviewBtn = document.getElementById('fullReviewBtn');
+  if (fullReviewBtn) {
+    fullReviewBtn.addEventListener('click', function () {
+      var historyContainer = document.getElementById('historyContainer');
+      var selected = getSelectedScan(historyContainer);
+      if (!selected || selected.error) {
+        setStatus(selected && selected.error ? selected.error : 'Select a past scan first.');
+        return;
+      }
+
+      var key = 'scan:' + selected.site;
+      chrome.storage.local.get(key, function (data) {
+        var entry = data[key] && data[key][selected.index];
+        if (!entry) {
+          setStatus('Selected scan could not be found.');
+          return;
+        }
+
+        chrome.storage.local.set({ reviewTargetKey: key }, function () {
+          var reviewUrl = chrome.runtime.getURL('src/review.html');
+          window.open(reviewUrl, '_blank');
+        });
+      });
     });
   }
 
@@ -511,20 +976,9 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   }
 
-  var moreBtn = document.getElementById('morePanelBtn');
-  if (moreBtn) {
-    moreBtn.addEventListener('click', handleMore);
-  }
-
-  var moreBack = document.getElementById('moreBack');
-  if (moreBack) {
-    moreBack.addEventListener('click', function () {
-      showView('main');
-    });
-  }
-
   bindCheckToggles();
   loadToggle();
+  loadAllowlists();
   loadChecks(function () {
     loadResults();
   });
