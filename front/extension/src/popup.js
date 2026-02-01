@@ -791,6 +791,15 @@ document.addEventListener('DOMContentLoaded', function () {
     settingsBtn.addEventListener('click', function () {
       showView('settings');
     });
+
+  //Added for FAQ page
+  var faqBtn = document.getElementById('faqBtn');
+  if (faqBtn) {
+    faqBtn.addEventListener('click', function () {
+      var faqURL = chrome.runtime.getURL('src/faq.html');
+      window.open(faqURL, '_blank');
+    });
+  }
   }
 
   function setDropdownState(toggle, body, isOpen) {
