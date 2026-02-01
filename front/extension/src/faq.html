@@ -1,0 +1,120 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Script Inspector FAQ</title>
+    <link rel="stylesheet" href="./faq.css" />
+  </head>
+  <body>
+    <div class="page">
+      <header>
+        <h1>FAQ & Help</h1>
+        <p class="subhead">Common questions and vulnerability explanations.</p>
+      </header>
+
+      <div class="card">
+        <h2>General Questions</h2>
+        
+        <details class="faq-item">
+          <summary>Is my data secure?</summary>
+          <div class="faq-content">
+            <p><strong>Yes.</strong> This extension runs entirely on your device ("client-side").</p>
+            <ul>
+              <li>No browsing data is sent to external servers.</li>
+              <li>Scan results are stored locally in your browser's storage.</li>
+              <li>You can clear all stored data at any time via the Settings menu.</li>
+            </ul>
+          </div>
+        </details>
+
+        <details class="faq-item">
+          <summary>What does the "Health Score" mean?</summary>
+          <div class="faq-content">
+            <p>The score is a calculation (0-100%) based on three areas:</p>
+            <ul>
+              <li><strong>Structure:</strong> Usage of inline scripts and event handlers.</li>
+              <li><strong>Security:</strong> Presence of security headers like CSP and HSTS.</li>
+              <li><strong>Exposure:</strong> Data leaks, insecure forms, and third-party script risks.</li>
+            </ul>
+          </div>
+        </details>
+      </div>
+
+      <div class="card">
+        <h2>Vulnerability Definitions</h2>
+
+        <details class="faq-item">
+          <summary>What is "Reverse Tabnabbing"?</summary>
+          <div class="faq-content">
+            <p>This occurs when a link uses <code>target="_blank"</code> without <code>rel="noopener"</code>. The newly opened page can access your original page via <code>window.opener</code>, potentially redirecting it to a malicious site.</p>
+          </div>
+        </details>
+
+        <details class="faq-item">
+          <summary>Why are "Inline Scripts" bad?</summary>
+          <div class="faq-content">
+            <p>Scripts written directly in HTML (<code>&lt;script&gt;...&lt;/script&gt;</code>) are difficult to secure with a Content Security Policy (CSP). They make it harder to prevent Cross-Site Scripting (XSS) attacks because the browser cannot easily distinguish between your valid script and a malicious one injected by an attacker.</p>
+          </div>
+        </details>
+
+        <details class="faq-item">
+          <summary>What is a CSRF Token?</summary>
+          <div class="faq-content">
+            <p>A Cross-Site Request Forgery (CSRF) token is a secret value included in forms. It proves that the form submission originated from your actual website, not from a malicious link clicked by the user elsewhere.</p>
+          </div>
+        </details>
+        
+        <details class="faq-item">
+          <summary>What is "MIME Sniffing" (X-Content-Type-Options)?</summary>
+          <div class="faq-content">
+            <p>Browsers sometimes try to "guess" the file type of a resource, ignoring what the server says. Attackers can use this to disguise malicious scripts as images or text files. The <code>X-Content-Type-Options: nosniff</code> header prevents this behavior.</p>
+          </div>
+        </details>
+
+        <details class="faq-item">
+          <summary>Why are "Third-Party Scripts" a risk?</summary>
+          <div class="faq-content">
+            <p>Third-party scripts are code loaded from other websites (like analytics or ad trackers). If the external site is hacked, attackers can inject malicious code into your site automatically. Our extension flags these so you can review if they are necessary and trusted.</p>
+          </div>
+        </details>
+
+        <details class="faq-item">
+          <summary>What is "Subresource Integrity" (SRI)?</summary>
+          <div class="faq-content">
+            <p>SRI is a security feature that prevents external scripts from being tampered with. It works by checking a cryptographic "fingerprint" (hash) of the file. If the file content changes (e.g., due to a hack), the browser blocks it. This extension warns you when external scripts are missing this protection.</p>
+          </div>
+        </details>
+
+        <details class="faq-item">
+          <summary>What are "Hardcoded Secrets"?</summary>
+          <div class="faq-content">
+            <p>This refers to sensitive information like API keys, passwords, or authentication tokens that are written directly into the code. This is dangerous because anyone viewing the page source can steal them. The extension scans for patterns that look like these leaked secrets.</p>
+          </div>
+        </details>
+
+        <details class="faq-item">
+          <summary>What is "Template Injection"?</summary>
+          <div class="faq-content">
+            <p>Server-Side Template Injection (SSTI) occurs when user input is unsafely embedded into a server template. We scan for markers like <code>{{...}}</code> or <code>&lt;%...%&gt;</code> which might indicate that internal server logic is being exposed to the client, potentially allowing attackers to take control.</p>
+          </div>
+        </details>
+
+        <details class="faq-item">
+          <summary>Why is "Mixed Content" (HTTP vs HTTPS) flagged?</summary>
+          <div class="faq-content">
+            <p>HTTPS encrypts the data between your browser and the site. If a page loads resources (like scripts or styles) over an insecure HTTP connection, attackers can intercept or modify that content. The extension penalizes pages that do not use HTTPS exclusively.</p>
+          </div>
+        </details>
+
+        <details class="faq-item">
+          <summary>What is "Clickjacking" protection?</summary>
+          <div class="faq-content">
+            <p>Clickjacking involves tricking a user into clicking something different from what they perceive, often by overlaying invisible frames. We check for headers like <code>X-Frame-Options</code> or CSP <code>frame-ancestors</code> which prevent your site from being secretly embedded inside other malicious sites.</p>
+          </div>
+        </details>
+      </div>
+    </div>
+    <script src="./faq.js"></script>
+  </body>
+</html>
