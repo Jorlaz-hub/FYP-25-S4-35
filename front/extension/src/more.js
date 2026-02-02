@@ -163,12 +163,12 @@ document.addEventListener('DOMContentLoaded', function () {
       var checkedBoxes = historyContainer.querySelectorAll('input[type="checkbox"]:checked');
 
       if (checkedBoxes.length === 0) {
-        alert('Need to select a past scan');
+        alert('Please select a scan from view history first');
         return;
       }
 
       if (checkedBoxes.length > 1) {
-        alert('only one past scan can be selected at a time');
+        alert('Only one scan should be selected');
         return;
       }
 
@@ -210,12 +210,12 @@ document.addEventListener('DOMContentLoaded', function () {
       var checkedBoxes = historyContainer.querySelectorAll('input[type="checkbox"]:checked');
 
       if (checkedBoxes.length === 0) {
-        alert('Need to select a past scan');
+        alert('Please select a scan from view history first');
         return;
       }
 
       if (checkedBoxes.length > 1) {
-        alert('only one past scan can be selected at a time');
+        alert('Only one scan should be selected');
         return;
       }
 
@@ -310,3 +310,4 @@ document.addEventListener('DOMContentLoaded', function () {
     document.body.removeChild(textarea);
   }
 });
+

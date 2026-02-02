@@ -695,8 +695,8 @@ function handleHistory() {
 function getSelectedScan(container) {
   if (!container) return null;
   var checked = container.querySelectorAll('input[type="checkbox"]:checked');
-  if (!checked.length) return { error: 'Select a past scan first.' };
-  if (checked.length > 1) return { error: 'Select only one scan at a time.' };
+  if (!checked.length) return { error: 'Please select a scan from view history first' };
+  if (checked.length > 1) return { error: 'Only one scan should be selected' };
 
   var cb = checked[0];
   return { site: cb.dataset.site, index: cb.dataset.index };
@@ -920,7 +920,9 @@ document.addEventListener('DOMContentLoaded', function () {
       var historyContainer = document.getElementById('historyContainer');
       var selected = getSelectedScan(historyContainer);
       if (!selected || selected.error) {
-        setStatus(selected && selected.error ? selected.error : 'Select a past scan first.');
+        var message = selected && selected.error ? selected.error : 'Please select a scan from view history first';
+        alert(message);
+        setStatus(message);
         return;
       }
 
@@ -958,7 +960,9 @@ document.addEventListener('DOMContentLoaded', function () {
       var historyContainer = document.getElementById('historyContainer');
       var selected = getSelectedScan(historyContainer);
       if (!selected || selected.error) {
-        setStatus(selected && selected.error ? selected.error : 'Select a past scan first.');
+        var message = selected && selected.error ? selected.error : 'Please select a scan from view history first';
+        alert(message);
+        setStatus(message);
         return;
       }
 
@@ -992,3 +996,6 @@ document.addEventListener('DOMContentLoaded', function () {
     loadResults();
   });
 });
+
+
+
