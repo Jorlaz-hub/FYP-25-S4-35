@@ -2,9 +2,24 @@ document.addEventListener('DOMContentLoaded', () => {
   const subtitle = document.getElementById('reportSubtitle');
   const summaryGrid = document.getElementById('summaryGrid');
   const scoreTable = document.getElementById('scoreTable');
-  const metricList = document.getElementById('metricList');
-  const headerList = document.getElementById('headerList');
-  const otherList = document.getElementById('otherList');
+  const checkHttps = document.getElementById('checkHttps');
+  const checkCspHeader = document.getElementById('checkCspHeader');
+  const checkCspQuality = document.getElementById('checkCspQuality');
+  const checkHsts = document.getElementById('checkHsts');
+  const checkXcto = document.getElementById('checkXcto');
+  const checkReferrer = document.getElementById('checkReferrer');
+  const checkPermissions = document.getElementById('checkPermissions');
+  const checkThirdParty = document.getElementById('checkThirdParty');
+  const checkSri = document.getElementById('checkSri');
+  const checkInlineScripts = document.getElementById('checkInlineScripts');
+  const checkInlineEvents = document.getElementById('checkInlineEvents');
+  const checkTemplateMarkers = document.getElementById('checkTemplateMarkers');
+  const checkObfuscated = document.getElementById('checkObfuscated');
+  const checkUnsafeLinks = document.getElementById('checkUnsafeLinks');
+  const checkCsrf = document.getElementById('checkCsrf');
+  const checkInsecureForms = document.getElementById('checkInsecureForms');
+  const checkTokens = document.getElementById('checkTokens');
+  const checkCookies = document.getElementById('checkCookies');
   const downloadReportBtn = document.getElementById('downloadReportBtn');
 
   const params = new URLSearchParams(window.location.search);
@@ -43,9 +58,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     renderScoreTable(scoreTable, areas);
-    renderMetrics(metricList, result);
-    renderHeaders(headerList, result);
-    renderOtherChecks(otherList, result);
+    renderAllChecks(result);
 
     downloadReportBtn.addEventListener('click', () => {
       const reportText = buildReportText({ site, entry });
@@ -128,65 +141,94 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  function renderMetrics(list, result) {
-    list.innerHTML = '';
-    const inlineScriptsUnsafe = result.inlineScriptsUnsafe ?? '--';
-    const thirdPartyUnsafe = result.thirdPartyScriptsUnsafe ?? result.thirdPartyScripts ?? '--';
-    const tokenHitsUnsafe = result.tokenHitsUnsafe ?? result.tokenHits ?? '--';
-    const templateMarkersUnsafe = result.templateMarkersUnsafe ?? result.templateMarkers ?? '--';
-    const formsWithoutCsrfUnsafe = result.formsWithoutCsrfUnsafe ?? result.formsWithoutCsrf ?? '--';
-    const metrics = [
-      ['Inline scripts without safety tags', inlineScriptsUnsafe],
-      ['External scripts without safety checks', thirdPartyUnsafe],
-      ['External scripts missing SRI', result.thirdPartyNoSRI ?? '--'],
-      ['Clickable elements with inline actions', result.inlineEventHandlers],
-      ['Obfuscated inline scripts', result.obfuscatedInlineUnsafe ?? '--'],
-      ['Template markers in unsafe scripts', templateMarkersUnsafe],
-      ['Token-like strings in unsafe scripts', tokenHitsUnsafe],
-      ['Forms missing anti-forgery protection', formsWithoutCsrfUnsafe],
-      ['Forms that expose passwords or send data off-site', result.insecureForms],
-      ['Number of unsafe links', result.unsafeLinks]
-    ];
-
-    metrics.forEach(([label, value]) => {
-      list.appendChild(metricItem(label, value));
-    });
-  }
-
-  function renderHeaders(list, result) {
-    list.innerHTML = '';
+  function renderAllChecks(result) {
     const headers = result.responseHeaders || {};
     const cspMeta = result.cspMeta || [];
     const cspVal = (headers['content-security-policy'] || '').toLowerCase();
     const cspTokens = getCspTokens(cspVal);
-
-    list.appendChild(metricItem('Content-Security-Policy header', headers['content-security-policy'] || 'Not present'));
-    list.appendChild(metricItem('Strict-Transport-Security', headers['strict-transport-security'] || 'Not present'));
-    list.appendChild(metricItem('X-Content-Type-Options', headers['x-content-type-options'] || 'Not present'));
-    list.appendChild(metricItem('Referrer-Policy', headers['referrer-policy'] || 'Not present'));
-    list.appendChild(metricItem('Permissions-Policy', headers['permissions-policy'] || 'Not present'));
-    list.appendChild(metricItem('CSP allows unsafe-inline', cspTokens.hasUnsafeInline ? 'Yes' : cspVal ? 'No' : 'Not present'));
-    list.appendChild(metricItem('CSP allows unsafe-eval', cspTokens.hasUnsafeEval ? 'Yes' : cspVal ? 'No' : 'Not present'));
-    list.appendChild(metricItem('CSP allows data:', cspTokens.hasData ? 'Yes' : cspVal ? 'No' : 'Not present'));
-
-    if (cspMeta.length > 0) {
-      cspMeta.forEach((val, idx) => {
-        list.appendChild(metricItem(`CSP meta tag ${idx + 1}`, val));
-      });
-    } else {
-      list.appendChild(metricItem('CSP meta tag', 'Not present'));
-    }
-  }
-
-  function renderOtherChecks(list, result) {
-    list.innerHTML = '';
     const url = result.url || '';
     const isHttps = url ? url.startsWith('https://') : null;
     const cookieIssues = result.cookieIssues || {};
-    list.appendChild(metricItem('Page protocol (HTTPS)', isHttps == null ? '--' : (isHttps ? 'Secure (https)' : 'Not secure (http)')));
-    list.appendChild(metricItem('Cookies missing HttpOnly', cookieIssues.missingHttpOnly ?? '--'));
-    list.appendChild(metricItem('Cookies missing Secure', cookieIssues.missingSecure ?? '--'));
-    list.appendChild(metricItem('Cookies missing SameSite', cookieIssues.missingSameSite ?? '--'));
+
+    renderList(checkHttps, [
+      ['Page protocol', isHttps == null ? '--' : (isHttps ? 'Secure (https)' : 'Not secure (http)')]
+    ]);
+
+    renderList(checkCspHeader, [
+      ['CSP header', headers['content-security-policy'] ? 'Present' : 'Not present'],
+      ['CSP header value', headers['content-security-policy'] || 'NIL'],
+      ['CSP meta tag', cspMeta.length ? `${cspMeta.length} present` : 'Not present']
+    ]);
+
+    renderList(checkCspQuality, [
+      ['Unsafe-inline', cspVal ? (cspTokens.hasUnsafeInline ? 'Allowed' : 'Not allowed') : 'Not present'],
+      ['Unsafe evaluation', cspVal ? (cspTokens.hasUnsafeEval ? 'Allowed' : 'Not allowed') : 'Not present'],
+      ['Data', cspVal ? (cspTokens.hasData ? 'Allowed' : 'Not allowed') : 'Not present']
+    ]);
+
+    renderList(checkHsts, [
+      ['Strict-Transport-Security', headers['strict-transport-security'] || 'Not present']
+    ]);
+
+    renderList(checkXcto, [
+      ['X-Content-Type-Options', headers['x-content-type-options'] || 'Not present']
+    ]);
+
+    renderList(checkReferrer, [
+      ['Referrer-Policy', headers['referrer-policy'] || 'Not present']
+    ]);
+
+    renderList(checkPermissions, [
+      ['Permissions-Policy', headers['permissions-policy'] || 'Not present']
+    ]);
+
+    renderList(checkThirdParty, [
+      ['Third-party scripts', result.thirdPartyScripts ?? '--'],
+      ['External scripts without safety checks', result.thirdPartyScriptsUnsafe ?? result.thirdPartyScripts ?? '--']
+    ]);
+
+    renderList(checkSri, [
+      ['External scripts missing Subresource Integrity (SRI)', result.thirdPartyNoSRI ?? '--']
+    ]);
+
+    renderList(checkInlineScripts, [
+      ['Inline scripts without safety tags', result.inlineScriptsUnsafe ?? '--'],
+      ['Total inline scripts', result.inlineScripts ?? '--']
+    ]);
+
+    renderList(checkInlineEvents, [
+      ['Inline event handlers', result.inlineEventHandlers ?? '--']
+    ]);
+
+    renderList(checkTemplateMarkers, [
+      ['Template markers in unsafe scripts', result.templateMarkersUnsafe ?? result.templateMarkers ?? '--']
+    ]);
+
+    renderList(checkObfuscated, [
+      ['Obfuscated inline scripts', result.obfuscatedInlineUnsafe ?? '--']
+    ]);
+
+    renderList(checkUnsafeLinks, [
+      ['Number of unsafe links', result.unsafeLinks ?? '--']
+    ]);
+
+    renderList(checkCsrf, [
+      ['Forms missing anti-forgery protection (CSRF)', result.formsWithoutCsrfUnsafe ?? result.formsWithoutCsrf ?? '--']
+    ]);
+
+    renderList(checkInsecureForms, [
+      ['Forms that expose passwords or send data off-site', result.insecureForms ?? '--']
+    ]);
+
+    renderList(checkTokens, [
+      ['Token-like strings in unsafe scripts', result.tokenHitsUnsafe ?? result.tokenHits ?? '--']
+    ]);
+
+    renderList(checkCookies, [
+      ['Cookies missing HttpOnly', cookieIssues.missingHttpOnly ?? '--'],
+      ['Cookies missing Secure', cookieIssues.missingSecure ?? '--'],
+      ['Cookies missing SameSite', cookieIssues.missingSameSite ?? '--']
+    ]);
   }
 
   function getCspTokens(csp) {
@@ -198,6 +240,16 @@ document.addEventListener('DOMContentLoaded', () => {
       hasUnsafeEval: tokens.indexOf("'unsafe-eval'") !== -1,
       hasData: tokens.indexOf('data:') !== -1
     };
+  }
+
+  function formatCspQuality(cspVal, cspTokens) {
+    if (!cspVal) return 'Not present';
+    const issues = [];
+    if (cspTokens.hasUnsafeInline) issues.push('unsafe-inline');
+    if (cspTokens.hasUnsafeEval) issues.push('unsafe-eval');
+    if (cspTokens.hasData) issues.push('data:');
+    if (!issues.length) return 'Strong (no unsafe tokens)';
+    return `Weak (allows ${issues.join(', ')})`;
   }
 
   function getCspDirectiveTokens(csp, directive) {
@@ -220,6 +272,14 @@ document.addEventListener('DOMContentLoaded', () => {
     text.textContent = `${label}: ${value ?? '--'}`;
     li.appendChild(text);
     return li;
+  }
+
+  function renderList(list, items) {
+    if (!list) return;
+    list.innerHTML = '';
+    items.forEach(([label, value]) => {
+      list.appendChild(metricItem(label, value));
+    });
   }
 
   function cell(text) {
@@ -259,7 +319,7 @@ document.addEventListener('DOMContentLoaded', () => {
     lines.push('Key Findings (only unsafe items)');
     lines.push(`Inline scripts without safety tags: ${result.inlineScriptsUnsafe ?? '--'}`);
     lines.push(`External scripts without safety checks: ${result.thirdPartyScriptsUnsafe ?? result.thirdPartyScripts ?? '--'}`);
-    lines.push(`External scripts missing SRI: ${result.thirdPartyNoSRI ?? '--'}`);
+    lines.push(`External scripts missing Subresource Integrity (SRI): ${result.thirdPartyNoSRI ?? '--'}`);
     lines.push(`Clickable elements with inline actions: ${result.inlineEventHandlers ?? '--'}`);
     lines.push(`Obfuscated inline scripts: ${result.obfuscatedInlineUnsafe ?? '--'}`);
     lines.push(`Template markers in unsafe scripts: ${result.templateMarkersUnsafe ?? result.templateMarkers ?? '--'}`);
@@ -272,14 +332,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const headers = result.responseHeaders || {};
     const cspVal = (headers['content-security-policy'] || '').toLowerCase();
     const cspTokens = getCspTokens(cspVal);
-    lines.push(`Rules for allowed scripts (CSP): ${headers['content-security-policy'] || 'Not present'}`);
-    lines.push(`Force HTTPS (HSTS): ${headers['strict-transport-security'] || 'Not present'}`);
+    lines.push(`CSP header: ${headers['content-security-policy'] ? 'Present' : 'Not present'}`);
+    lines.push(`CSP header value: ${headers['content-security-policy'] || 'NIL'}`);
+    lines.push(`Force HTTPS (Strict-Transport-Security / HSTS): ${headers['strict-transport-security'] || 'Not present'}`);
     lines.push(`MIME type protection: ${headers['x-content-type-options'] || 'Not present'}`);
     lines.push(`Referrer privacy setting: ${headers['referrer-policy'] || 'Not present'}`);
     lines.push(`Browser permissions limits: ${headers['permissions-policy'] || 'Not present'}`);
-    lines.push(`CSP allows unsafe-inline: ${cspVal ? (cspTokens.hasUnsafeInline ? 'Yes' : 'No') : 'Not present'}`);
-    lines.push(`CSP allows unsafe-eval: ${cspVal ? (cspTokens.hasUnsafeEval ? 'Yes' : 'No') : 'Not present'}`);
-    lines.push(`CSP allows data: ${cspVal ? (cspTokens.hasData ? 'Yes' : 'No') : 'Not present'}`);
+    lines.push(`Content Security Policy (CSP) quality: ${formatCspQuality(cspVal, cspTokens)}`);
     if (result.cspMeta && result.cspMeta.length > 0) {
       result.cspMeta.forEach((val, idx) => {
         lines.push(`CSP meta tag ${idx + 1}: ${val}`);
@@ -288,10 +347,32 @@ document.addEventListener('DOMContentLoaded', () => {
       lines.push('CSP meta tag: Not present');
     }
     lines.push('');
-    lines.push('Protocol & Cookies');
+    lines.push('Checks (Details)');
     const url = result.url || '';
     const isHttps = url ? url.startsWith('https://') : null;
     const cookieIssues = result.cookieIssues || {};
+    lines.push(`HTTPS only: ${isHttps == null ? '--' : (isHttps ? 'Pass' : 'Fail')}`);
+    lines.push(`Content Security Policy (CSP) header: ${headers['content-security-policy'] ? 'Present' : 'Not present'}`);
+    lines.push(`Content Security Policy (CSP) quality: ${formatCspQuality(cspVal, cspTokens)}`);
+    lines.push(`Strict-Transport-Security (HSTS) header: ${headers['strict-transport-security'] ? 'Present' : 'Not present'}`);
+    lines.push(`X-Content-Type-Options: ${headers['x-content-type-options'] ? 'Present' : 'Not present'}`);
+    lines.push(`Referrer-Policy: ${headers['referrer-policy'] ? 'Present' : 'Not present'}`);
+    lines.push(`Permissions-Policy: ${headers['permissions-policy'] ? 'Present' : 'Not present'}`);
+    lines.push(`Third-party scripts: ${result.thirdPartyScripts ?? '--'}`);
+    lines.push(`Subresource Integrity (SRI) missing: ${result.thirdPartyNoSRI ?? '--'}`);
+    lines.push(`Inline scripts: ${result.inlineScriptsUnsafe ?? result.inlineScripts ?? '--'}`);
+    lines.push(`Inline event handlers: ${result.inlineEventHandlers ?? '--'}`);
+    lines.push(`Template markers: ${result.templateMarkersUnsafe ?? result.templateMarkers ?? '--'}`);
+    lines.push(`Obfuscated scripts: ${result.obfuscatedInlineUnsafe ?? '--'}`);
+    lines.push(`Reverse tabnabbing: ${result.unsafeLinks ?? '--'}`);
+    lines.push(`Cross-Site Request Forgery (CSRF) tokens missing: ${result.formsWithoutCsrfUnsafe ?? result.formsWithoutCsrf ?? '--'}`);
+    lines.push(`Insecure forms: ${result.insecureForms ?? '--'}`);
+    lines.push(`Token/secret patterns: ${result.tokenHitsUnsafe ?? result.tokenHits ?? '--'}`);
+    lines.push(`Cookie: missing HttpOnly: ${cookieIssues.missingHttpOnly ?? '--'}`);
+    lines.push(`Cookie: missing Secure: ${cookieIssues.missingSecure ?? '--'}`);
+    lines.push(`Cookie: missing SameSite: ${cookieIssues.missingSameSite ?? '--'}`);
+    lines.push('');
+    lines.push('Protocol & Cookies');
     lines.push(`Page protocol (HTTPS): ${isHttps == null ? '--' : (isHttps ? 'Secure (https)' : 'Not secure (http)')}`);
     lines.push(`Cookies missing HttpOnly: ${cookieIssues.missingHttpOnly ?? '--'}`);
     lines.push(`Cookies missing Secure: ${cookieIssues.missingSecure ?? '--'}`);
