@@ -167,19 +167,23 @@ document.addEventListener('DOMContentLoaded', () => {
     ]);
 
     renderList(checkHsts, [
-      ['Strict-Transport-Security', headers['strict-transport-security'] || 'Not present']
+      ['STSH', headers['strict-transport-security'] ? 'Present' : 'Not present'],
+      ['Header value', headers['strict-transport-security'] || 'NIL']
     ]);
 
     renderList(checkXcto, [
-      ['X-Content-Type-Options', headers['x-content-type-options'] || 'Not present']
+      ['XCTO', headers['x-content-type-options'] ? 'Present' : 'Not present'],
+      ['Header value', headers['x-content-type-options'] || 'NIL']
     ]);
 
     renderList(checkReferrer, [
-      ['Referrer-Policy', headers['referrer-policy'] || 'Not present']
+      ['Referrer-Policy header', headers['referrer-policy'] ? 'Present' : 'Not present'],
+      ['Header value', headers['referrer-policy'] || 'NIL']
     ]);
 
     renderList(checkPermissions, [
-      ['Permissions-Policy', headers['permissions-policy'] || 'Not present']
+      ['Permissions-Policy header', headers['permissions-policy'] ? 'Present' : 'Not present'],
+      ['Header value', headers['permissions-policy'] || 'NIL']
     ]);
 
     renderList(checkThirdParty, [
@@ -334,8 +338,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const cspTokens = getCspTokens(cspVal);
     lines.push(`CSP header: ${headers['content-security-policy'] ? 'Present' : 'Not present'}`);
     lines.push(`CSP header value: ${headers['content-security-policy'] || 'NIL'}`);
-    lines.push(`Force HTTPS (Strict-Transport-Security / HSTS): ${headers['strict-transport-security'] || 'Not present'}`);
-    lines.push(`MIME type protection: ${headers['x-content-type-options'] || 'Not present'}`);
+    lines.push(`Strict-Transport-Security header (STSH): ${headers['strict-transport-security'] ? 'Present' : 'Not present'}`);
+    lines.push(`STSH: ${headers['strict-transport-security'] ? 'Present' : 'Not present'}`);
+    lines.push(`STSH header value: ${headers['strict-transport-security'] || 'NIL'}`);
+    lines.push(`X-Content-Type-Options (XCTO): ${headers['x-content-type-options'] ? 'Present' : 'Not present'}`);
+    lines.push(`XCTO header value: ${headers['x-content-type-options'] || 'NIL'}`);
     lines.push(`Referrer privacy setting: ${headers['referrer-policy'] || 'Not present'}`);
     lines.push(`Browser permissions limits: ${headers['permissions-policy'] || 'Not present'}`);
     lines.push(`Content Security Policy (CSP) quality: ${formatCspQuality(cspVal, cspTokens)}`);
