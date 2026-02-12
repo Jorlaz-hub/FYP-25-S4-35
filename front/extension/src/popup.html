@@ -12,7 +12,7 @@
         <p class="eyebrow">Client-Side Script Security Inspector</p>
         <h1>Script Inspector</h1>
       </div>
-      <div class="header-actions">
+      <div class="header-actions" id="headerActions">
         <button id="refreshBtn" type="button" class="ghost-btn secondary">Refresh</button>
         <button id="settingsBtn" type="button" class="icon-btn" title="Settings" aria-label="Settings">
           <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -111,6 +111,16 @@
               <span class="dropdown-action">Show</span>
             </button>
             <div id="checksBody" class="checks-body" aria-hidden="true">
+              <div class="settings-row">
+                <div class="settings-copy">
+                  <div class="settings-title">Alerts</div>
+                  <div class="settings-desc">Show critical security alerts in popup.</div>
+                </div>
+                <label class="toggle-switch">
+                  <input type="checkbox" id="alertsToggle" />
+                  <span class="slider"></span>
+                </label>
+              </div>
               <div class="settings-row">
                 <div class="settings-copy">
                   <div class="settings-title">Enable all checks</div>

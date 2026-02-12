@@ -1,6 +1,7 @@
 var ENABLED_KEY = 'scanEnabled';
 var CHECKS_KEY = 'checksConfig';
 var WHITELIST_KEY = 'whitelistPatterns';
+var ALERTS_ENABLED_KEY = 'alertsEnabled';
 var DEFAULT_CHECKS = SharedAlgo.DEFAULT_CHECKS;
 var normalizeChecks = SharedAlgo.normalizeChecks;
 var computeAreaScores = SharedAlgo.computeAreaScores;
@@ -22,6 +23,8 @@ var latestEntry = null;
 var latestHealth = null;
 var latestAreas = null;
 var historyVisible = false;
+var lastCriticalAlertKey = '';
+var alertsEnabled = true;
 
 function formatRow(label, value) {
   var row = document.createElement('div');
@@ -38,6 +41,69 @@ function formatRow(label, value) {
 function setStatus(message) {
   var el = document.getElementById('status');
   if (el) el.textContent = message || '';
+}
+
+function updateAlertsToggleUI(enabled) {
+  var toggle = document.getElementById('alertsToggle');
+  if (toggle) toggle.checked = !!enabled;
+}
+
+function getCriticalAlertInfo(info, health, checks) {
+  if (!info) return null;
+  var cfg = checks || normalizeChecks(null);
+
+  if (cfg.https) {
+    try {
+      if (new URL(info.url).protocol !== 'https:') {
+        return {
+          code: 'https',
+          message: 'Critical: This page is not using HTTPS. Data can be intercepted. Avoid entering sensitive information.'
+        };
+      }
+    } catch (e) {}
+  }
+
+  if (cfg.insecureForms && (info.insecureForms || 0) > 0) {
+    return {
+      code: 'insecureForms',
+      message: 'Critical: Insecure form detected (password via GET or external form action). Submitted data may be exposed.'
+    };
+  }
+
+  if (cfg.csrf && (info.formsWithoutCsrfUnsafe || 0) > 0) {
+    return {
+      code: 'csrf',
+      message: 'Critical: POST form without CSRF protection detected. Requests may be forged by another site.'
+    };
+  }
+
+  if (cfg.tokenHits && (info.tokenHitsUnsafe || 0) > 0) {
+    return {
+      code: 'tokenHits',
+      message: 'Critical: Possible hardcoded API key/token found in inline script. Secrets may be exposed to attackers.'
+    };
+  }
+
+  if (health && typeof health.score === 'number' && health.score <= 40) {
+    return {
+      code: 'health40',
+      message: 'Critical: Page security health is 40% or below. Immediate review is recommended.'
+    };
+  }
+
+  return null;
+}
+
+function maybeShowCriticalAlert(entry, health, checks) {
+  if (!alertsEnabled) return;
+  if (!entry || !entry.result) return;
+  var alertInfo = getCriticalAlertInfo(entry.result, health, checks);
+  if (!alertInfo) return;
+
+  var key = String(entry.result.url || '') + '|' + String(entry.ts || '') + '|' + alertInfo.code;
+  if (key === lastCriticalAlertKey) return;
+  lastCriticalAlertKey = key;
+  alert(alertInfo.message);
 }
 
 var checksConfig = normalizeChecks(null);
@@ -280,10 +346,14 @@ function showView(viewName) {
     main: document.getElementById('mainView'),
     settings: document.getElementById('settingsView')
   };
+  var headerActions = document.getElementById('headerActions');
   Object.keys(views).forEach(function (key) {
     if (!views[key]) return;
     views[key].classList.toggle('is-active', key === viewName);
   });
+  if (headerActions) {
+    headerActions.style.display = viewName === 'settings' ? 'none' : '';
+  }
 }
 
 function setHealthDisplay(scoreText, severity, caption, angleDeg) {
@@ -402,6 +472,20 @@ function loadChecks(callback) {
   });
 }
 
+function loadAlertsSetting(callback) {
+  chrome.storage.local.get([ALERTS_ENABLED_KEY], function (data) {
+    var enabled = data[ALERTS_ENABLED_KEY];
+    if (enabled === undefined) enabled = true;
+    alertsEnabled = !!enabled;
+    updateAlertsToggleUI(alertsEnabled);
+    if (data[ALERTS_ENABLED_KEY] === undefined) {
+      var obj = {}; obj[ALERTS_ENABLED_KEY] = alertsEnabled;
+      chrome.storage.local.set(obj);
+    }
+    if (callback) callback(alertsEnabled);
+  });
+}
+
 function withActiveTab(fn) {
   chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
     var tab = tabs && tabs[0];
@@ -439,6 +523,7 @@ function render(results) {
   var angle = (latestHealth.score / 100) * 360;
   var caption = latestHealth.severity === 'passed' ? 'Secure posture' : latestHealth.severity === 'poor' ? 'Issues detected' : 'Unsafe';
   setHealthDisplay(latestHealth.score + '%', latestHealth.severity, caption, angle);
+  maybeShowCriticalAlert(latestEntry, latestHealth, checksConfig);
 
   if (results.length >= 2) {
     previousEntry = results[1];
@@ -776,6 +861,16 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   }
 
+  var alertsToggle = document.getElementById('alertsToggle');
+  if (alertsToggle) {
+    alertsToggle.addEventListener('change', function (e) {
+      alertsEnabled = !!e.target.checked;
+      var obj = {}; obj[ALERTS_ENABLED_KEY] = alertsEnabled;
+      chrome.storage.local.set(obj);
+      setStatus(alertsEnabled ? 'Critical alerts enabled.' : 'Critical alerts disabled.');
+    });
+  }
+
   var scanBtn = document.getElementById('scanBtn');
   if (scanBtn) {
     scanBtn.addEventListener('click', runScan);
@@ -992,8 +1087,10 @@ document.addEventListener('DOMContentLoaded', function () {
   bindCheckToggles();
   loadToggle();
   loadAllowlists();
-  loadChecks(function () {
-    loadResults();
+  loadAlertsSetting(function () {
+    loadChecks(function () {
+      loadResults();
+    });
   });
 });
 
