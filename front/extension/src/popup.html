@@ -25,6 +25,17 @@
     </header>
 
     <div id="status"></div>
+    <div id="popupAlert" class="popup-alert" role="alert" aria-live="polite" style="display: none;">
+      <span id="popupAlertText"></span>
+      <button id="popupAlertClose" type="button" aria-label="Dismiss alert">x</button>
+    </div>
+    <div id="popupConfirm" class="popup-confirm" role="dialog" aria-live="polite" style="display: none;">
+      <div id="popupConfirmText"></div>
+      <div class="popup-confirm-actions">
+        <button id="popupConfirmCancel" type="button" class="dark-btn secondary">Cancel</button>
+        <button id="popupConfirmOk" type="button" class="dark-btn">Confirm</button>
+      </div>
+    </div>
 
     <main>
       <section id="mainView" class="view is-active">
@@ -379,6 +390,13 @@
             </div>
             <div id="historySection" class="history-section" style="display: none;">
               <div id="historyContainer" class="history-container"></div>
+            </div>
+            <div class="settings-row" id="downloadSelectedRow" style="display: none;">
+              <div class="settings-copy">
+                <div class="settings-title">Download selected</div>
+                <div class="settings-desc">Export selected scans as a JSON file.</div>
+              </div>
+              <button id="downloadSelectedBtn" type="button" class="dark-btn">Download selected</button>
             </div>
             <div class="settings-row">
               <div class="settings-copy">

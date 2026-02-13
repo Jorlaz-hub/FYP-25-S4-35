@@ -25,6 +25,7 @@ var latestAreas = null;
 var historyVisible = false;
 var lastCriticalAlertKey = '';
 var alertsEnabled = true;
+var pendingConfirmAction = null;
 
 function formatRow(label, value) {
   var row = document.createElement('div');
@@ -41,6 +42,36 @@ function formatRow(label, value) {
 function setStatus(message) {
   var el = document.getElementById('status');
   if (el) el.textContent = message || '';
+}
+
+function showPopupAlert(message) {
+  var box = document.getElementById('popupAlert');
+  var text = document.getElementById('popupAlertText');
+  if (!box || !text) return;
+  text.textContent = message || '';
+  box.style.display = '';
+}
+
+function hidePopupAlert() {
+  var box = document.getElementById('popupAlert');
+  if (!box) return;
+  box.style.display = 'none';
+}
+
+function showPopupConfirm(message, onConfirm) {
+  var box = document.getElementById('popupConfirm');
+  var text = document.getElementById('popupConfirmText');
+  if (!box || !text) return;
+  text.textContent = message || '';
+  pendingConfirmAction = typeof onConfirm === 'function' ? onConfirm : null;
+  box.style.display = '';
+}
+
+function hidePopupConfirm() {
+  var box = document.getElementById('popupConfirm');
+  if (!box) return;
+  box.style.display = 'none';
+  pendingConfirmAction = null;
 }
 
 function updateAlertsToggleUI(enabled) {
@@ -103,7 +134,7 @@ function maybeShowCriticalAlert(entry, health, checks) {
   var key = String(entry.result.url || '') + '|' + String(entry.ts || '') + '|' + alertInfo.code;
   if (key === lastCriticalAlertKey) return;
   lastCriticalAlertKey = key;
-  alert(alertInfo.message);
+  showPopupAlert(alertInfo.message);
 }
 
 var checksConfig = normalizeChecks(null);
@@ -670,6 +701,14 @@ function setHistoryVisibility(container, visible) {
   container.classList.toggle('is-hidden', !visible);
 }
 
+function updateSelectedDownloadVisibility() {
+  var row = document.getElementById('downloadSelectedRow');
+  var container = document.getElementById('historyContainer');
+  if (!row || !container) return;
+  var checked = container.querySelectorAll('input[type="checkbox"]:checked');
+  row.style.display = checked.length ? '' : 'none';
+}
+
 function handleHistory() {
   var historySection = document.getElementById('historySection');
   var container = document.getElementById('historyContainer');
@@ -681,6 +720,7 @@ function handleHistory() {
     historySection.style.display = 'none';
     container.innerHTML = '';
     if (historyBtn) historyBtn.textContent = 'View history';
+    updateSelectedDownloadVisibility();
     return;
   }
 
@@ -694,6 +734,7 @@ function handleHistory() {
     var scanKeys = Object.keys(data).filter(function (k) { return k.indexOf('scan:') === 0; });
     if (scanKeys.length === 0) {
       container.textContent = 'No scan history available.';
+      updateSelectedDownloadVisibility();
       return;
     }
 
@@ -774,6 +815,7 @@ function handleHistory() {
       siteCard.appendChild(scanList);
       container.appendChild(siteCard);
     });
+    updateSelectedDownloadVisibility();
   });
 }
 
@@ -785,6 +827,16 @@ function getSelectedScan(container) {
 
   var cb = checked[0];
   return { site: cb.dataset.site, index: cb.dataset.index };
+}
+
+function getSelectedScans(container) {
+  if (!container) return [];
+  var checked = container.querySelectorAll('input[type="checkbox"]:checked');
+  var selected = [];
+  checked.forEach(function (cb) {
+    selected.push({ site: cb.dataset.site, index: Number(cb.dataset.index) });
+  });
+  return selected;
 }
 
 function copyToClipboard(text) {
@@ -814,27 +866,45 @@ function fallbackCopy(text) {
 }
 
 function handleClearStorage() {
-  if (!window.confirm('Clear all stored scan results?')) {
-    setStatus('Clear cancelled.');
-    return;
-  }
-  chrome.storage.local.clear(function () {
-    setStatus('All stored results cleared.');
-    loadToggle();
-    loadChecks(function () {
-      loadResults();
+  showPopupConfirm('Clear all stored scan results?', function () {
+    chrome.storage.local.clear(function () {
+      setStatus('All stored results cleared.');
+      loadToggle();
+      loadChecks(function () {
+        loadResults();
+      });
+      var historySection = document.getElementById('historySection');
+      var container = document.getElementById('historyContainer');
+      if (historySection) historySection.style.display = 'none';
+      if (container) container.textContent = 'No history loaded yet.';
+      historyVisible = false;
+      var historyBtn = document.getElementById('historyBtn');
+      if (historyBtn) historyBtn.textContent = 'View history';
     });
-    var historySection = document.getElementById('historySection');
-    var container = document.getElementById('historyContainer');
-    if (historySection) historySection.style.display = 'none';
-    if (container) container.textContent = 'No history loaded yet.';
-    historyVisible = false;
-    var historyBtn = document.getElementById('historyBtn');
-    if (historyBtn) historyBtn.textContent = 'View history';
   });
 }
 
 document.addEventListener('DOMContentLoaded', function () {
+  var popupAlertClose = document.getElementById('popupAlertClose');
+  if (popupAlertClose) {
+    popupAlertClose.addEventListener('click', hidePopupAlert);
+  }
+  var popupConfirmCancel = document.getElementById('popupConfirmCancel');
+  if (popupConfirmCancel) {
+    popupConfirmCancel.addEventListener('click', function () {
+      hidePopupConfirm();
+      setStatus('Clear cancelled.');
+    });
+  }
+  var popupConfirmOk = document.getElementById('popupConfirmOk');
+  if (popupConfirmOk) {
+    popupConfirmOk.addEventListener('click', function () {
+      var action = pendingConfirmAction;
+      hidePopupConfirm();
+      if (action) action();
+    });
+  }
+
   var toggle = document.getElementById('scanToggle');
   if (toggle) {
     toggle.addEventListener('change', function (e) {
@@ -977,6 +1047,15 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   }
 
+  var historyContainer = document.getElementById('historyContainer');
+  if (historyContainer) {
+    historyContainer.addEventListener('change', function (e) {
+      if (e && e.target && e.target.type === 'checkbox') {
+        updateSelectedDownloadVisibility();
+      }
+    });
+  }
+
   var downloadAllBtn = document.getElementById('downloadAllBtn');
   if (downloadAllBtn) {
     downloadAllBtn.addEventListener('click', function () {
@@ -1009,6 +1088,46 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   }
 
+  var downloadSelectedBtn = document.getElementById('downloadSelectedBtn');
+  if (downloadSelectedBtn) {
+    downloadSelectedBtn.addEventListener('click', function () {
+      var container = document.getElementById('historyContainer');
+      var selected = getSelectedScans(container);
+      if (!selected.length) {
+        setStatus('Select at least one scan from history first.');
+        return;
+      }
+
+      chrome.storage.local.get(null, function (data) {
+        var payload = {};
+
+        selected.forEach(function (item) {
+          var key = 'scan:' + item.site;
+          var list = data[key] || [];
+          var entry = list[item.index];
+          if (!entry) return;
+          if (!payload[item.site]) payload[item.site] = [];
+          payload[item.site].push(entry);
+        });
+
+        if (!Object.keys(payload).length) {
+          setStatus('Selected scans could not be found.');
+          return;
+        }
+
+        var json = JSON.stringify(payload, null, 2);
+        var blob = new Blob([json], { type: 'application/json' });
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = 'selected-scan-history-' + new Date().toISOString().slice(0, 10) + '.json';
+        a.click();
+        URL.revokeObjectURL(url);
+        setStatus('Selected scans downloaded.');
+      });
+    });
+  }
+
   var generateReportBtn = document.getElementById('generateReportBtn');
   if (generateReportBtn) {
     generateReportBtn.addEventListener('click', function () {
@@ -1016,7 +1135,7 @@ document.addEventListener('DOMContentLoaded', function () {
       var selected = getSelectedScan(historyContainer);
       if (!selected || selected.error) {
         var message = selected && selected.error ? selected.error : 'Please select a scan from view history first';
-        alert(message);
+        showPopupAlert(message);
         setStatus(message);
         return;
       }
@@ -1056,7 +1175,7 @@ document.addEventListener('DOMContentLoaded', function () {
       var selected = getSelectedScan(historyContainer);
       if (!selected || selected.error) {
         var message = selected && selected.error ? selected.error : 'Please select a scan from view history first';
-        alert(message);
+        showPopupAlert(message);
         setStatus(message);
         return;
       }
