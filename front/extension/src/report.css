@@ -15,8 +15,9 @@ html, body {
   justify-content: space-between;
   align-items: center;
   padding: 20px 24px;
-  background: #ffffff;
-  border-bottom: 1px solid #e2e8f0;
+  background: #0f172a;
+  color: #ffffff;
+  border-bottom: 1px solid #0b1220;
   position: sticky;
   top: 0;
   z-index: 1;
@@ -25,18 +26,24 @@ html, body {
 .report-header h1 {
   margin: 0 0 4px;
   font-size: 20px;
+  color: #ffffff;
 }
 
 .subtitle {
   margin: 0;
   font-size: 13px;
-  color: #475569;
+  color: #cbd5e1;
 }
 
 .download-btn {
   padding: 8px 14px;
   font-size: 13px;
   cursor: pointer;
+  border: 1px solid #cbd5e1;
+  background: #e2e8f0;
+  color: #0f172a;
+  border-radius: 10px;
+  font-weight: 700;
 }
 
 .report-body {
@@ -147,6 +154,30 @@ html, body {
   border: 1px solid #e2e8f0;
   border-radius: 8px;
   padding: 8px 10px;
+}
+
+.metric-item-label {
+  display: block;
+  font-size: 12px;
+  color: #64748b;
+  margin-bottom: 4px;
+}
+
+.metric-item-value {
+  font-size: 13px;
+  color: #0f172a;
+}
+
+.metric-item-value.scrollable {
+  height: 64px;
+  padding: 6px 8px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  background: #ffffff;
+  overflow: auto;
+  white-space: nowrap;
+  word-break: normal;
+  scrollbar-width: thin;
 }
 
 .badge {
