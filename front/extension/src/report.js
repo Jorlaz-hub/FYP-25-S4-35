@@ -272,10 +272,28 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function metricItem(label, value) {
     const li = document.createElement('li');
-    const text = document.createElement('span');
-    text.textContent = `${label}: ${value ?? '--'}`;
-    li.appendChild(text);
+    const labelEl = document.createElement('span');
+    labelEl.className = 'metric-item-label';
+    labelEl.textContent = label;
+
+    const valueEl = document.createElement('div');
+    valueEl.className = 'metric-item-value';
+    valueEl.textContent = value ?? '--';
+    if (shouldUseScrollBox(label, value)) {
+      valueEl.classList.add('scrollable');
+    }
+
+    li.appendChild(labelEl);
+    li.appendChild(valueEl);
     return li;
+  }
+
+  function shouldUseScrollBox(label, value) {
+    const text = String(value ?? '');
+    if (!text) return false;
+    if (/header value/i.test(String(label || ''))) return true;
+    if (text.length > 140) return true;
+    return text.indexOf(';') !== -1;
   }
 
   function renderList(list, items) {
