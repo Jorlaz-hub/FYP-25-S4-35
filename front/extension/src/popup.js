@@ -1246,6 +1246,3 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   });
 });
-
-
-
