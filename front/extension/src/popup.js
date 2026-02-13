@@ -23,6 +23,7 @@ var latestEntry = null;
 var latestHealth = null;
 var latestAreas = null;
 var historyVisible = false;
+var historyDataCache = null;
 var lastCriticalAlertKey = '';
 var alertsEnabled = true;
 var pendingConfirmAction = null;
@@ -709,16 +710,121 @@ function updateSelectedDownloadVisibility() {
   row.style.display = checked.length ? '' : 'none';
 }
 
+function renderHistoryList(data) {
+  var container = document.getElementById('historyContainer');
+  if (!container) return;
+
+  container.innerHTML = '';
+  var scanKeys = Object.keys(data || {}).filter(function (k) { return k.indexOf('scan:') === 0; });
+  var searchInput = document.getElementById('historySearchInput');
+  var query = searchInput ? String(searchInput.value || '').trim().toLowerCase() : '';
+
+  if (query) {
+    scanKeys = scanKeys.filter(function (key) {
+      return key.replace('scan:', '').toLowerCase().indexOf(query) !== -1;
+    });
+  }
+
+  if (scanKeys.length === 0) {
+    container.textContent = query ? 'No domains matched your search.' : 'No scan history available.';
+    updateSelectedDownloadVisibility();
+    return;
+  }
+
+  scanKeys.forEach(function (key, siteIndex) {
+    var historyList = data[key] || [];
+    var url = key.replace('scan:', '');
+
+    var siteCard = document.createElement('div');
+    siteCard.className = 'history-site';
+
+    var urlBar = document.createElement('div');
+    urlBar.className = 'history-url-bar';
+
+    var urlIndex = document.createElement('span');
+    urlIndex.className = 'history-url-index';
+    urlIndex.textContent = String(siteIndex + 1);
+
+    var urlText = document.createElement('span');
+    urlText.className = 'history-url-text';
+    urlText.textContent = url;
+
+    var copyBtn = document.createElement('button');
+    copyBtn.type = 'button';
+    copyBtn.className = 'history-copy-btn';
+    copyBtn.title = 'Copy URL';
+    copyBtn.setAttribute('aria-label', 'Copy URL');
+    copyBtn.textContent = 'Copy';
+    copyBtn.addEventListener('click', function () {
+      copyToClipboard(url);
+    });
+
+    urlBar.appendChild(urlIndex);
+    urlBar.appendChild(urlText);
+    urlBar.appendChild(copyBtn);
+    siteCard.appendChild(urlBar);
+
+    var scanList = document.createElement('ul');
+    scanList.className = 'history-scan-list';
+
+    historyList.forEach(function (entry, index) {
+      var row = document.createElement('label');
+      row.className = 'scan-entry';
+
+      var checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.dataset.site = url;
+      checkbox.dataset.index = index;
+
+      var date = entry.ts ? new Date(entry.ts).toLocaleString() : 'Unknown';
+      var score = entry.areas && entry.areas.overall ? entry.areas.overall.score : '--';
+      var severity = entry.areas && entry.areas.overall ? entry.areas.overall.severity : '--';
+
+      var meta = document.createElement('div');
+      meta.className = 'scan-meta';
+
+      var dateText = document.createElement('span');
+      dateText.className = 'scan-date';
+      dateText.textContent = date;
+
+      var scoreText = document.createElement('span');
+      scoreText.className = 'scan-score';
+      scoreText.textContent = 'Score: ' + score;
+
+      if (severity !== '--') {
+        var badge = document.createElement('span');
+        badge.className = 'severity-badge ' + String(severity).toLowerCase();
+        badge.textContent = severity;
+        scoreText.appendChild(badge);
+      }
+
+      row.appendChild(checkbox);
+      meta.appendChild(dateText);
+      meta.appendChild(scoreText);
+      row.appendChild(meta);
+      scanList.appendChild(row);
+    });
+
+    siteCard.appendChild(scanList);
+    container.appendChild(siteCard);
+  });
+
+  updateSelectedDownloadVisibility();
+}
+
 function handleHistory() {
   var historySection = document.getElementById('historySection');
   var container = document.getElementById('historyContainer');
   var historyBtn = document.getElementById('historyBtn');
+  var historySearchInput = document.getElementById('historySearchInput');
   if (!historySection || !container) return;
 
   if (historyVisible) {
     historyVisible = false;
     historySection.style.display = 'none';
     container.innerHTML = '';
+    if (historySearchInput) historySearchInput.value = '';
+    historyDataCache = null;
     if (historyBtn) historyBtn.textContent = 'View history';
     updateSelectedDownloadVisibility();
     return;
@@ -727,95 +833,12 @@ function handleHistory() {
   historyVisible = true;
   historySection.style.display = 'block';
   if (historyBtn) historyBtn.textContent = 'Hide history';
+  if (historySearchInput) historySearchInput.value = '';
   container.textContent = 'Loading history...';
 
   chrome.storage.local.get(null, function (data) {
-    container.innerHTML = '';
-    var scanKeys = Object.keys(data).filter(function (k) { return k.indexOf('scan:') === 0; });
-    if (scanKeys.length === 0) {
-      container.textContent = 'No scan history available.';
-      updateSelectedDownloadVisibility();
-      return;
-    }
-
-    scanKeys.forEach(function (key, siteIndex) {
-      var historyList = data[key] || [];
-      var url = key.replace('scan:', '');
-
-      var siteCard = document.createElement('div');
-      siteCard.className = 'history-site';
-
-      var urlBar = document.createElement('div');
-      urlBar.className = 'history-url-bar';
-
-      var urlIndex = document.createElement('span');
-      urlIndex.className = 'history-url-index';
-      urlIndex.textContent = String(siteIndex + 1);
-
-      var urlText = document.createElement('span');
-      urlText.className = 'history-url-text';
-      urlText.textContent = url;
-
-      var copyBtn = document.createElement('button');
-      copyBtn.type = 'button';
-      copyBtn.className = 'history-copy-btn';
-      copyBtn.title = 'Copy URL';
-      copyBtn.setAttribute('aria-label', 'Copy URL');
-      copyBtn.textContent = 'Copy';
-      copyBtn.addEventListener('click', function () {
-        copyToClipboard(url);
-      });
-
-      urlBar.appendChild(urlIndex);
-      urlBar.appendChild(urlText);
-      urlBar.appendChild(copyBtn);
-      siteCard.appendChild(urlBar);
-
-      var scanList = document.createElement('ul');
-      scanList.className = 'history-scan-list';
-
-      historyList.forEach(function (entry, index) {
-        var row = document.createElement('label');
-        row.className = 'scan-entry';
-
-        var checkbox = document.createElement('input');
-        checkbox.type = 'checkbox';
-        checkbox.dataset.site = url;
-        checkbox.dataset.index = index;
-
-        var date = entry.ts ? new Date(entry.ts).toLocaleString() : 'Unknown';
-        var score = entry.areas && entry.areas.overall ? entry.areas.overall.score : '--';
-        var severity = entry.areas && entry.areas.overall ? entry.areas.overall.severity : '--';
-
-        var meta = document.createElement('div');
-        meta.className = 'scan-meta';
-
-        var dateText = document.createElement('span');
-        dateText.className = 'scan-date';
-        dateText.textContent = date;
-
-        var scoreText = document.createElement('span');
-        scoreText.className = 'scan-score';
-        scoreText.textContent = 'Score: ' + score;
-
-        if (severity !== '--') {
-          var badge = document.createElement('span');
-          badge.className = 'severity-badge ' + String(severity).toLowerCase();
-          badge.textContent = severity;
-          scoreText.appendChild(badge);
-        }
-
-        row.appendChild(checkbox);
-        meta.appendChild(dateText);
-        meta.appendChild(scoreText);
-        row.appendChild(meta);
-        scanList.appendChild(row);
-      });
-
-      siteCard.appendChild(scanList);
-      container.appendChild(siteCard);
-    });
-    updateSelectedDownloadVisibility();
+    historyDataCache = data || {};
+    renderHistoryList(historyDataCache);
   });
 }
 
@@ -875,9 +898,12 @@ function handleClearStorage() {
       });
       var historySection = document.getElementById('historySection');
       var container = document.getElementById('historyContainer');
+      var historySearchInput = document.getElementById('historySearchInput');
       if (historySection) historySection.style.display = 'none';
       if (container) container.textContent = 'No history loaded yet.';
+      if (historySearchInput) historySearchInput.value = '';
       historyVisible = false;
+      historyDataCache = null;
       var historyBtn = document.getElementById('historyBtn');
       if (historyBtn) historyBtn.textContent = 'View history';
     });
@@ -1053,6 +1079,14 @@ document.addEventListener('DOMContentLoaded', function () {
       if (e && e.target && e.target.type === 'checkbox') {
         updateSelectedDownloadVisibility();
       }
+    });
+  }
+
+  var historySearchInput = document.getElementById('historySearchInput');
+  if (historySearchInput) {
+    historySearchInput.addEventListener('input', function () {
+      if (!historyVisible || !historyDataCache) return;
+      renderHistoryList(historyDataCache);
     });
   }
 
