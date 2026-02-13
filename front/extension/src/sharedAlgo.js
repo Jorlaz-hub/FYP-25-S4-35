@@ -95,32 +95,32 @@ var SharedAlgo = (function () {
     var formsWithoutCsrf = info.formsWithoutCsrfUnsafe != null ? info.formsWithoutCsrfUnsafe : (info.formsWithoutCsrf || 0);
 
     var structure = 100;
-    if (checks.inlineScripts) structure -= clamp(inlineUnsafeCount * 2, 0, 13);
-    if (checks.inlineEvents) structure -= clamp(inlineEvents * 1, 0, 10);
-    if (checks.templateMarkers) structure -= clamp(templateMarkers * 2, 0, 8);
-    if (checks.unsafeLinks) structure -= clamp((info.unsafeLinks || 0) * 1, 0, 5);
+    if (checks.inlineScripts) structure -= clamp(inlineUnsafeCount * 2.5, 0, 18);
+    if (checks.inlineEvents) structure -= clamp(inlineEvents * 1.5, 0, 14);
+    if (checks.templateMarkers) structure -= clamp(templateMarkers * 2.5, 0, 11);
+    if (checks.unsafeLinks) structure -= clamp((info.unsafeLinks || 0) * 1.5, 0, 7);
 
     var security = 100;
     if (checks.csp && noCsp) {
-      security -= 10;
+      security -= 12;
     } else if (checks.cspQuality) {
       var cspVal = (hdrs['content-security-policy'] || '').toLowerCase();
       var scriptTokens = getCspDirectiveTokens(cspVal, 'script-src');
       var scriptElemTokens = getCspDirectiveTokens(cspVal, 'script-src-elem');
       var tokens = scriptTokens.concat(scriptElemTokens);
-      if (tokens.indexOf("'unsafe-inline'") !== -1) security -= 6;
-      if (tokens.indexOf("'unsafe-eval'") !== -1) security -= 4;
-      if (tokens.indexOf("data:") !== -1) security -= 2;
+      if (tokens.indexOf("'unsafe-inline'") !== -1) security -= 7;
+      if (tokens.indexOf("'unsafe-eval'") !== -1) security -= 5;
+      if (tokens.indexOf("data:") !== -1) security -= 3;
     }
-    if (checks.hsts && !hdrs['strict-transport-security']) security -= 5;
-    if (checks.xcto && !hdrs['x-content-type-options']) security -= 3;
-    if (checks.referrer && !hdrs['referrer-policy']) security -= 2;
-    if (checks.permissions && !hdrs['permissions-policy']) security -= 1;
-    if (checks.sri) security -= clamp(thirdPartyNoSRI * 1, 0, 4);
-    if (checks.thirdParty) security -= clamp(thirdPartyUnsafe * 1, 0, 5);
-    if (checks.inlineScripts) security -= clamp(inlineUnsafeCount * 1, 0, 5);
+    if (checks.hsts && !hdrs['strict-transport-security']) security -= 6;
+    if (checks.xcto && !hdrs['x-content-type-options']) security -= 4;
+    if (checks.referrer && !hdrs['referrer-policy']) security -= 3;
+    if (checks.permissions && !hdrs['permissions-policy']) security -= 2;
+    if (checks.sri) security -= clamp(thirdPartyNoSRI * 1.5, 0, 6);
+    if (checks.thirdParty) security -= clamp(thirdPartyUnsafe * 1.5, 0, 8);
+    if (checks.inlineScripts) security -= clamp(inlineUnsafeCount * 1.5, 0, 7);
     try {
-      if (checks.https && new URL(info.url).protocol !== 'https:') security -= 8;
+      if (checks.https && new URL(info.url).protocol !== 'https:') security -= 10;
     } catch (e) {}
 
     if (checks.obfuscated) {
@@ -128,28 +128,39 @@ var SharedAlgo = (function () {
         ? info.obfuscatedInlineUnsafe
         : info.scripts.filter(function (s) { return s.isObfuscated; }).length;
       if (obfuscatedCount > 0) {
-        security -= clamp(obfuscatedCount * 4, 0, 8);
+        security -= clamp(obfuscatedCount * 5, 0, 10);
       }
     }
 
     if (checks.cookie) {
-      security -= clamp(cookieIssues.missingHttpOnly * 3, 0, 9);
-      security -= clamp(cookieIssues.missingSecure * 3, 0, 9);
-      security -= clamp(cookieIssues.missingSameSite * 2, 0, 6);
+      security -= clamp(cookieIssues.missingHttpOnly * 4, 0, 10);
+      security -= clamp(cookieIssues.missingSecure * 4, 0, 10);
+      security -= clamp(cookieIssues.missingSameSite * 3, 0, 8);
     }
 
     var exposure = 100;
-    if (checks.csrf) exposure -= clamp(formsWithoutCsrf * 3, 0, 12);
-    if (checks.tokenHits) exposure -= clamp(tokenHits * 1, 0, 5);
-    if (checks.thirdParty) exposure -= clamp(thirdPartyUnsafe * 1, 0, 6);
-    if (checks.inlineScripts) exposure -= clamp(inlineUnsafeCount * 1, 0, 3);
-    if (checks.insecureForms) exposure -= clamp((info.insecureForms || 0) * 6, 0, 12);
+    if (checks.csrf) exposure -= clamp(formsWithoutCsrf * 4, 0, 16);
+    if (checks.tokenHits) exposure -= clamp(tokenHits * 2, 0, 8);
+    if (checks.thirdParty) exposure -= clamp(thirdPartyUnsafe * 1.5, 0, 10);
+    if (checks.inlineScripts) exposure -= clamp(inlineUnsafeCount * 1.5, 0, 5);
+    if (checks.insecureForms) exposure -= clamp((info.insecureForms || 0) * 8, 0, 16);
 
     structure = clamp(structure, 0, 100);
     security = clamp(security, 0, 100);
     exposure = clamp(exposure, 0, 100);
 
     var overallScore = Math.round(((structure + security + exposure) / 3) * 100) / 100;
+
+    // Critical-combo hard fail: downgrade clearly dangerous HTTP pages.
+    var insecureForms = info.insecureForms || 0;
+    var isHttp = false;
+    try {
+      isHttp = new URL(info.url).protocol !== 'https:';
+    } catch (e) {}
+    if (isHttp && noCsp && (insecureForms > 0 || formsWithoutCsrf > 0)) {
+      overallScore = Math.min(overallScore, 35);
+    }
+
     return {
       structure: { score: Math.round(structure * 100) / 100, severity: severity(structure) },
       security: { score: Math.round(security * 100) / 100, severity: severity(security) },

@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Unsafe Red Demo</title>
+  </head>
+  <body onload="console.log('inline onload fired')">
+    <h1>Unsafe Red Demo</h1>
+    <p>This page is intentionally insecure for testing.</p>
+
+    <!-- Unsafe links (target=_blank without rel) -->
+    <a href="http://example.com" target="_blank">Unsafe link 1</a>
+    <a href="http://neverssl.com" target="_blank">Unsafe link 2</a>
+    <a href="http://testphp.vulnweb.com" target="_blank">Unsafe link 3</a>
+    <a href="http://http.badssl.com" target="_blank">Unsafe link 4</a>
+    <a href="http://expired.badssl.com" target="_blank">Unsafe link 5</a>
+    <a href="http://self-signed.badssl.com" target="_blank">Unsafe link 6</a>
+    <a href="http://wrong.host.badssl.com" target="_blank">Unsafe link 7</a>
+
+    <!-- Inline event handlers -->
+    <button onclick="alert('x')">Inline onclick</button>
+    <input onfocus="console.log('focus')" onblur="console.log('blur')" />
+    <img src="x" onerror="console.log('img error')" alt="broken" />
+    <div onmouseover="console.log('hover')">Hover me</div>
+    <div oncontextmenu="console.log('context')">Right click me</div>
+    <input oninput="console.log('typing')" />
+    <button ondblclick="console.log('double')">Double click</button>
+    <div ontouchstart="console.log('touch')">Touch</div>
+    <div ondrag="console.log('drag')">Drag</div>
+    <div ondrop="console.log('drop')">Drop</div>
+
+    <!-- Insecure forms -->
+    <form method="GET" action="/collect">
+      <label>Password (GET without CSRF)</label>
+      <input type="password" name="password" />
+      <button type="submit">Submit</button>
+    </form>
+
+    <form method="POST" action="http://evil.example.com/collect">
+      <label>External action form (no CSRF)</label>
+      <input type="text" name="email" />
+      <button type="submit">Submit</button>
+    </form>
+
+    <form method="POST" action="/local-submit">
+      <label>Same-origin form without token</label>
+      <input type="text" name="username" />
+      <button type="submit">Submit</button>
+    </form>
+
+    <form method="POST" action="/local-submit-2">
+      <label>Same-origin form without token 2</label>
+      <input type="text" name="username2" />
+      <button type="submit">Submit</button>
+    </form>
+
+    <form method="POST" action="/local-submit-3">
+      <label>Same-origin form without token 3</label>
+      <input type="email" name="email3" />
+      <button type="submit">Submit</button>
+    </form>
+
+    <form method="POST" action="/local-submit-4">
+      <label>Same-origin form without token 4</label>
+      <input type="text" name="note4" />
+      <button type="submit">Submit</button>
+    </form>
+
+    <!-- Third-party scripts without SRI / with HTTP -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/lodash@4.17.21/lodash.min.js"></script>
+    <script src="http://example.com/insecure-third-party.js"></script>
+    <script src="http://neverssl.com/insecure-third-party-2.js"></script>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dayjs/dayjs.min.js"></script>
+
+    <!-- Inline scripts with template markers and token-like strings -->
+    <script>
+      const api_key = "ABCDEFGHIJKLMNOPQRST1234567890";
+      const access_token = "ZXCVBNMASDFGHJKL1234567890TOKEN";
+      const t1 = "{{ user.email }}";
+      const t2 = "<% if (isAdmin) { %>admin<% } %>";
+      console.log(api_key, access_token, t1, t2);
+    </script>
+
+    <script>
+      var a = "eval(atob('YWxlcnQoMSk='))";
+      eval("console.log('unsafe-eval')");
+    </script>
+
+    <script>
+      document.body.insertAdjacentHTML(
+        "beforeend",
+        "<div onclick=\"console.log('dynamic inline event')\">dynamic</div>"
+      );
+    </script>
+
+    <script>
+      var secret = "authorization='Bearer ABCDEFGHIJKLMNOPQRSTUVWXYZ123456'";
+      console.log(secret);
+    </script>
+
+    <script>
+      var x = "{{token}} {{session.id}} {{profile.name}}";
+      var y = "<%= token %> <% if (user) { %>ok<% } %>";
+      var z = "{{admin.secret}} {{jwt.value}}";
+      const api_key_2 = "SECONDARYKEY1234567890ABCDE";
+      const access_token_2 = "ANOTHERACCESSTOKEN1234567890";
+      const secret_2 = "secret='TOPSECRET0123456789ABCDE'";
+      console.log(x, y, z, api_key_2, access_token_2, secret_2);
+    </script>
+
+    <script>
+      var o = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+      var p = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+      console.log(o + p);
+    </script>
+
+    <script>
+      const bearer = "bearer='ABCDEFGHIJKLMNOPQRSTUVWXYZ123456'";
+      const authorization = "authorization='Bearer ZYXWVUTSRQPONMLK9876543210'";
+      const template = "{{cart.total}} {{checkout.token}}";
+      console.log(bearer, authorization, template);
+    </script>
+  </body>
+</html>

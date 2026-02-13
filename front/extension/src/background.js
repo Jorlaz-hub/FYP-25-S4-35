@@ -59,7 +59,10 @@ chrome.runtime.onMessage.addListener(function (message, sender) {
     var key = 'scan:' + message.url;
     var tabId = sender && sender.tab ? sender.tab.id : null;
     var headerCache = tabId != null ? latestHeadersByTab[tabId] : null;
-    message.responseHeaders = headerCache ? headerCache.headers : {};
+    var headerUrl = headerCache && headerCache.url ? String(headerCache.url).split('#')[0] : '';
+    var scanUrl = message && message.url ? String(message.url).split('#')[0] : '';
+    var samePageHeaders = !!headerCache && !!headerUrl && !!scanUrl && headerUrl === scanUrl;
+    message.responseHeaders = samePageHeaders ? headerCache.headers : {};
 
     function saveScanWithCookies(cookieStats) {
       chrome.storage.local.get(['scanEnabled', key, CHECKS_KEY, WHITELIST_KEY], function (data) {
