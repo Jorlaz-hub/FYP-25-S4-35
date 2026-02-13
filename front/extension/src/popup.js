@@ -679,7 +679,9 @@ function handleDownload() {
     areas: latestAreas || (latestEntry.result ? computeAreaScores(latestEntry.result, checksConfig) : null),
     scripts: latestEntry.result.scripts,
     cspMeta: latestEntry.result.cspMeta,
-    responseHeaders: latestEntry.result.responseHeaders || {}
+    responseHeaders: latestEntry.result.responseHeaders || {},
+    headerState: latestEntry.result.headerState || (latestEntry.result.responseHeaders && Object.keys(latestEntry.result.responseHeaders).length ? 'captured' : 'unknown'),
+    headerMatch: latestEntry.result.headerMatch || 'none'
   };
   var blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
   var blobUrl = URL.createObjectURL(blob);

@@ -86,6 +86,8 @@ var SharedAlgo = (function () {
     var hdrs = {};
     Object.keys(headers).forEach(function (k) { hdrs[k.toLowerCase()] = headers[k]; });
     var cookieIssues = info.cookieIssues || { missingHttpOnly: 0, missingSecure: 0, missingSameSite: 0 };
+    var headerState = info.headerState || (Object.keys(hdrs).length ? 'captured' : 'unknown');
+    var hasCapturedHeaders = headerState === 'captured';
 
     var hasCspHeader = !!hdrs['content-security-policy'];
     var noCsp = !hasCspHeader && (info.cspMeta || []).length === 0;
@@ -101,9 +103,9 @@ var SharedAlgo = (function () {
     if (checks.unsafeLinks) structure -= clamp((info.unsafeLinks || 0) * 1.5, 0, 7);
 
     var security = 100;
-    if (checks.csp && noCsp) {
+    if (checks.csp && hasCapturedHeaders && noCsp) {
       security -= 12;
-    } else if (checks.cspQuality) {
+    } else if (checks.cspQuality && hasCapturedHeaders && hasCspHeader) {
       var cspVal = (hdrs['content-security-policy'] || '').toLowerCase();
       var scriptTokens = getCspDirectiveTokens(cspVal, 'script-src');
       var scriptElemTokens = getCspDirectiveTokens(cspVal, 'script-src-elem');
@@ -112,12 +114,12 @@ var SharedAlgo = (function () {
       if (tokens.indexOf("'unsafe-eval'") !== -1) security -= 5;
       if (tokens.indexOf("data:") !== -1) security -= 3;
     }
-    if (checks.hsts && !hdrs['strict-transport-security']) security -= 6;
-    if (checks.xcto && !hdrs['x-content-type-options']) security -= 4;
-    if (checks.referrer && !hdrs['referrer-policy']) security -= 3;
-    if (checks.permissions && !hdrs['permissions-policy']) security -= 2;
-    if (checks.sri) security -= clamp(thirdPartyNoSRI * 1.5, 0, 6);
-    if (checks.thirdParty) security -= clamp(thirdPartyUnsafe * 1.5, 0, 8);
+    if (hasCapturedHeaders && checks.hsts && !hdrs['strict-transport-security']) security -= 6;
+    if (hasCapturedHeaders && checks.xcto && !hdrs['x-content-type-options']) security -= 4;
+    if (hasCapturedHeaders && checks.referrer && !hdrs['referrer-policy']) security -= 3;
+    if (hasCapturedHeaders && checks.permissions && !hdrs['permissions-policy']) security -= 2;
+    if (checks.sri) security -= clamp(thirdPartyNoSRI * 1.0, 0, 4);
+    if (checks.thirdParty) security -= clamp(thirdPartyUnsafe * 1.0, 0, 5);
     if (checks.inlineScripts) security -= clamp(inlineUnsafeCount * 1.5, 0, 7);
     try {
       if (checks.https && new URL(info.url).protocol !== 'https:') security -= 10;
@@ -133,15 +135,15 @@ var SharedAlgo = (function () {
     }
 
     if (checks.cookie) {
-      security -= clamp(cookieIssues.missingHttpOnly * 4, 0, 10);
-      security -= clamp(cookieIssues.missingSecure * 4, 0, 10);
-      security -= clamp(cookieIssues.missingSameSite * 3, 0, 8);
+      security -= clamp(cookieIssues.missingHttpOnly * 2, 0, 6);
+      security -= clamp(cookieIssues.missingSecure * 2, 0, 6);
+      security -= clamp(cookieIssues.missingSameSite * 1.5, 0, 5);
     }
 
     var exposure = 100;
     if (checks.csrf) exposure -= clamp(formsWithoutCsrf * 4, 0, 16);
     if (checks.tokenHits) exposure -= clamp(tokenHits * 2, 0, 8);
-    if (checks.thirdParty) exposure -= clamp(thirdPartyUnsafe * 1.5, 0, 10);
+    if (checks.thirdParty) exposure -= clamp(thirdPartyUnsafe * 1.0, 0, 6);
     if (checks.inlineScripts) exposure -= clamp(inlineUnsafeCount * 1.5, 0, 5);
     if (checks.insecureForms) exposure -= clamp((info.insecureForms || 0) * 8, 0, 16);
 

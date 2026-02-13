@@ -14,6 +14,7 @@ var WHITELIST_KEY = 'whitelistPatterns';
 
 // cache recent response headers per tab
 var latestHeadersByTab = {};
+var HEADER_CACHE_LIMIT = 8;
 
 // set scan data history limit
 var HISTORY_LIMIT = 20;
@@ -54,15 +55,68 @@ function isUrlWhitelisted(url, whitelist) {
   return wl.some(function (p) { return hostMatchesPattern(host, p); });
 }
 
+function normalizeComparableUrl(url) {
+  try {
+    var parsed = new URL(String(url || ''));
+    var pathname = parsed.pathname || '/';
+    return {
+      full: parsed.origin + pathname + (parsed.search || ''),
+      path: parsed.origin + pathname,
+      origin: parsed.origin
+    };
+  } catch (e) {
+    return null;
+  }
+}
+
+function findBestHeadersForScan(tabId, scanUrl) {
+  var entries = latestHeadersByTab[tabId];
+  if (!entries || !entries.length) return null;
+
+  var scan = normalizeComparableUrl(scanUrl);
+  if (!scan) return null;
+
+  var best = null;
+  var now = Date.now();
+
+  entries.forEach(function (entry) {
+    var candidate = normalizeComparableUrl(entry.url);
+    if (!candidate) return;
+
+    var rank = 0;
+    if (candidate.full === scan.full) rank = 3;
+    else if (candidate.path === scan.path) rank = 2;
+    else if (candidate.origin === scan.origin) rank = 1;
+
+    if (!rank) return;
+
+    var ageMs = Math.max(0, now - (entry.ts || 0));
+    if (rank === 1 && ageMs > 10000) return;
+    if (rank >= 2 && ageMs > 60000) return;
+
+    if (!best || rank > best.rank || (rank === best.rank && entry.ts > best.ts)) {
+      best = {
+        headers: entry.headers || {},
+        url: entry.url || '',
+        ts: entry.ts || 0,
+        rank: rank,
+        match: rank === 3 ? 'exact' : rank === 2 ? 'path' : 'origin'
+      };
+    }
+  });
+
+  return best;
+}
+
 chrome.runtime.onMessage.addListener(function (message, sender) {
   if (message && message.kind === 'pageScanResult') {
     var key = 'scan:' + message.url;
     var tabId = sender && sender.tab ? sender.tab.id : null;
-    var headerCache = tabId != null ? latestHeadersByTab[tabId] : null;
-    var headerUrl = headerCache && headerCache.url ? String(headerCache.url).split('#')[0] : '';
-    var scanUrl = message && message.url ? String(message.url).split('#')[0] : '';
-    var samePageHeaders = !!headerCache && !!headerUrl && !!scanUrl && headerUrl === scanUrl;
-    message.responseHeaders = samePageHeaders ? headerCache.headers : {};
+    var headerCache = tabId != null ? findBestHeadersForScan(tabId, message.url) : null;
+    message.responseHeaders = headerCache ? (headerCache.headers || {}) : {};
+    message.headerState = headerCache ? 'captured' : 'unknown';
+    message.headerMatch = headerCache ? headerCache.match : 'none';
+    message.headerUrl = headerCache ? (headerCache.url || '') : '';
 
     function saveScanWithCookies(cookieStats) {
       chrome.storage.local.get(['scanEnabled', key, CHECKS_KEY, WHITELIST_KEY], function (data) {
@@ -126,7 +180,10 @@ chrome.webRequest.onHeadersReceived.addListener(
       var name = (h.name || '').toLowerCase();
       if (wanted.indexOf(name) !== -1) out[name] = h.value || '';
     });
-    latestHeadersByTab[details.tabId] = { url: details.url, headers: out, ts: Date.now() };
+    var list = latestHeadersByTab[details.tabId] || [];
+    list.unshift({ url: details.url, headers: out, ts: Date.now() });
+    if (list.length > HEADER_CACHE_LIMIT) list = list.slice(0, HEADER_CACHE_LIMIT);
+    latestHeadersByTab[details.tabId] = list;
   },
   { urls: ['<all_urls>'], types: ['main_frame'] },
   ['responseHeaders']
