@@ -21,6 +21,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const checkTokens = document.getElementById('checkTokens');
   const checkCookies = document.getElementById('checkCookies');
   const downloadReportBtn = document.getElementById('downloadReportBtn');
+  const backToTopBtn = document.getElementById('backToTopBtn');
+
+  setupBackToTop();
 
   const params = new URLSearchParams(window.location.search);
   const reportId = params.get('id');
@@ -109,6 +112,27 @@ document.addEventListener('DOMContentLoaded', () => {
       item.appendChild(valueEl);
       container.appendChild(item);
     });
+  }
+
+  function setupBackToTop() {
+    if (!backToTopBtn) return;
+
+    function thresholdPx() {
+      return Math.max(320, Math.round(window.innerHeight * 0.65));
+    }
+
+    function updateVisibility() {
+      const visible = window.scrollY > thresholdPx();
+      backToTopBtn.classList.toggle('is-visible', visible);
+    }
+
+    backToTopBtn.addEventListener('click', () => {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+
+    window.addEventListener('scroll', updateVisibility, { passive: true });
+    window.addEventListener('resize', updateVisibility);
+    updateVisibility();
   }
 
   function renderScoreTable(table, areas) {

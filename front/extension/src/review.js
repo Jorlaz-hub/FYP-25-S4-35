@@ -161,6 +161,7 @@
     function card(areaKey, title, score, sev, insightItems, themeClass) {
       var card = document.createElement('section');
       card.className = 'area-card ' + themeClass;
+      card.id = 'area-' + areaKey;
       var color = HEALTH_COLORS[sev] || '#94a3b8';
       // tint background and border using HEALTH_COLORS
       card.style.background = color + '1a';
@@ -228,6 +229,70 @@
     card('exposure', 'Exposure', areas.exposure.score, areas.exposure.severity, exposureInsights, 'exposure');
   }
 
+  function setupGaugeJumpLinks() {
+    function scrollToArea(areaId) {
+      var target = document.getElementById(areaId);
+      if (!target) return;
+      var header = document.querySelector('.review-header');
+      var headerOffset = header ? (header.offsetHeight + 12) : 12;
+      var y;
+      if (areaId === 'area-structure') {
+        var centeredOffset = (window.innerHeight / 2) - (target.offsetHeight / 2);
+        y = target.getBoundingClientRect().top + window.scrollY - Math.max(0, centeredOffset);
+      } else {
+        y = target.getBoundingClientRect().top + window.scrollY - headerOffset;
+      }
+      window.scrollTo({ top: Math.max(0, y), behavior: 'smooth' });
+    }
+
+    function onGaugeJump(e) {
+      var el = e.currentTarget;
+      if (!el) return;
+      var areaId = el.getAttribute('data-jump-target');
+      if (!areaId) return;
+      scrollToArea(areaId);
+    }
+
+    ['structure', 'security', 'exposure'].forEach(function (areaKey) {
+      var gauge = document.querySelector('.gauge[data-area="' + areaKey + '"]');
+      if (!gauge) return;
+      gauge.classList.add('is-jump-target');
+      gauge.setAttribute('role', 'button');
+      gauge.setAttribute('tabindex', '0');
+      gauge.setAttribute('aria-label', 'Jump to ' + areaKey + ' insights');
+      gauge.setAttribute('data-jump-target', 'area-' + areaKey);
+      gauge.addEventListener('click', onGaugeJump);
+      gauge.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onGaugeJump(e);
+        }
+      });
+    });
+  }
+
+  function setupBackToTop() {
+    var btn = document.getElementById('backToTopBtn');
+    if (!btn) return;
+
+    function thresholdPx() {
+      return Math.max(180, Math.round(window.innerHeight * 0.35));
+    }
+
+    function updateVisibility() {
+      var visible = window.scrollY > thresholdPx();
+      btn.classList.toggle('is-visible', visible);
+    }
+
+    btn.addEventListener('click', function () {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+
+    window.addEventListener('scroll', updateVisibility, { passive: true });
+    window.addEventListener('resize', updateVisibility);
+    updateVisibility();
+  }
+
   function handleDownload(data, areas) {
     var payload = {
       url: data.url,
@@ -257,6 +322,9 @@
   }
 
   function init() {
+    setupGaugeJumpLinks();
+    setupBackToTop();
+
     chrome.storage.local.get(['reviewTargetKey', CHECKS_KEY], function (cfg) {
       checksConfig = normalizeChecks(cfg[CHECKS_KEY]);
       var key = cfg.reviewTargetKey;
